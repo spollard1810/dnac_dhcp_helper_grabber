@@ -36,6 +36,7 @@ def main():
         output = OutputHelper(devices)
         csv_file = output.to_csv()
         print(f"\nData exported to: {csv_file}")
+        client.close()
 
     except Exception as e:
         print(f"Error: {e}")

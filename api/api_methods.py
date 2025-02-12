@@ -4,6 +4,7 @@ from requests.auth import HTTPBasicAuth
 import os
 from dotenv import load_dotenv
 import urllib3
+import atexit
 
 # Disable SSL warnings
 urllib3.disable_warnings()
@@ -21,11 +22,35 @@ class APIClient:
         # Always reload environment variables
         load_dotenv(override=True)
 
+        # Initialize session and token if not already done
+        if not hasattr(self, 'session'):
+            self.session = requests.Session()
+            self.session.verify = False  # Disable SSL verification
+            self.token = None
+            # Register cleanup on program exit
+            atexit.register(self.close)
+
         # Skip rest of initialization if already initialized
         if self._initialized:
             # Update credentials from environment
             self._load_credentials()
             return
+
+        # First time initialization
+        self._load_credentials()
+        self._initialized = True
+
+    def close(self) -> None:
+        """Close the session and cleanup resources."""
+        if hasattr(self, 'session') and self.session:
+            self.session.close()
+            self.session = None
+            self.token = None
+            self._initialized = False
+
+    def __del__(self):
+        """Ensure resources are cleaned up when the object is deleted."""
+        self.close()
 
     def _load_credentials(self):
         """Load or reload credentials from environment variables"""
