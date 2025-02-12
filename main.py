@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from api import client
+from api.outputhelper import OutputHelper
 import json
 from typing import Dict, Any
 
@@ -17,7 +18,14 @@ def main():
             limit=10,          # Get up to 10 devices
             offset=1           # Start from first record
         )
+        
+        # Print the response
         print_response(devices)
+        
+        # Convert to CSV
+        output = OutputHelper(devices)
+        csv_file = output.to_csv()
+        print(f"\nData exported to: {csv_file}")
 
     except Exception as e:
         print(f"Error: {e}")
