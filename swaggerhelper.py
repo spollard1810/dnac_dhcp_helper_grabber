@@ -70,10 +70,7 @@ def get_parameters(operation: Dict[str, Any]) -> list:
     return params
 
 def generate_api_methods(swagger: Dict[str, Any]) -> str:
-    lines = []
-    
-    # Add imports and class definition
-    lines.extend([
+    lines = [
         "from typing import Dict, List, Optional, Any",
         "import requests",
         "from requests.auth import HTTPBasicAuth",
@@ -101,8 +98,8 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
         "        load_dotenv()",
         "",
         "        # Get credentials from environment",
-        "        self.base_url = os.getenv('DNAC_HOST')",
-        "        if not self.base_url:",
+        "        self.host = os.getenv('DNAC_HOST')",
+        "        if not self.host:",
         "            raise ValueError('DNAC_HOST must be provided in .env file')",
         "",
         "        self.username = os.getenv('DNAC_USERNAME')",
@@ -113,8 +110,9 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
         "        if not self.password:",
         "            raise ValueError('DNAC_PASSWORD must be provided in .env file')",
         "",
-        "        # Strip any trailing slashes from base_url",
-        "        self.base_url = self.base_url.rstrip('/')",
+        "        # Strip any trailing slashes and protocol from host",
+        "        self.host = self.host.rstrip('/').replace('https://', '').replace('http://', '')",
+        "        self.base_url = f'https://{self.host}'  # Always use HTTPS",
         "        self.token = None",
         "        self.session = requests.Session()",
         "        self.session.verify = False  # Disable SSL verification",
@@ -125,7 +123,7 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
         "",
         "    def authenticate(self) -> None:",
         "        \"\"\"Authenticate with DNA Center and get token\"\"\"",
-        "        url = f'https://{self.base_url}/dna/system/api/v1/auth/token'",
+        "        url = f\"https://{self.host}/dna/system/api/v1/auth/token\"",
         "",
         "        try:",
         "            response = requests.post(",
@@ -162,7 +160,7 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
         "# Create a singleton instance",
         "client = APIClient()",
         ""
-    ])
+    ]
 
     # Process each endpoint
     for path, path_info in swagger['paths'].items():

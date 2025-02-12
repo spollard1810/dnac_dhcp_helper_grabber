@@ -4,6 +4,13 @@ from api import client
 from api.outputhelper import OutputHelper
 import json
 from typing import Dict, Any
+import logging
+
+# Set up debug logging
+logging.basicConfig(level=logging.DEBUG)
+requests_log = logging.getLogger("urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
 
 
 def print_response(response: Dict[str, Any]) -> None:
@@ -13,6 +20,7 @@ def print_response(response: Dict[str, Any]) -> None:
 
 def main():
     try:
+        print(f"Using DNAC host: {client.host}")
         print("Getting network devices...")
         devices = client.get_dna_intent_api_v1_network_device(
             limit=10,          # Get up to 10 devices
