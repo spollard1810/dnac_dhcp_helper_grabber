@@ -125,28 +125,48 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
         "        \"\"\"Authenticate with DNA Center and get token\"\"\"",
         "        url = f\"https://{self.host}/dna/system/api/v1/auth/token\"",
         "",
+        "        print(f\"\\nDebug - Authentication attempt:\")",
+        "        print(f\"URL: {url}\")",
+        "        print(f\"Username: {self.username}\")",
+        "        print(f\"Using HTTPBasicAuth: {HTTPBasicAuth(self.username, self.password)}\")",
+        "",
         "        try:",
-        "            response = requests.post(",
+        "            # Create a new session just for auth to avoid any header conflicts",
+        "            auth_session = requests.Session()",
+        "            auth_session.verify = False",
+        "",
+        "            print(\"\\nMaking authentication request...\")",
+        "            response = auth_session.post(",
         "                url,",
         "                auth=HTTPBasicAuth(self.username, self.password),",
         "                verify=False",
         "            )",
+        "",
+        "            print(f\"Response status code: {response.status_code}\")",
+        "            print(f\"Response headers: {response.headers}\")",
+        "",
+        "            if response.status_code != 200:",
+        "                print(f\"Response content: {response.text}\")",
+        "",
         "            response.raise_for_status()",
         "            self.token = response.json()['Token']",
-        "            ",
+        "            print(f\"Successfully got token: {self.token[:10]}...\")",
+        "",
         "            # Update session headers with new token",
         "            self.session.headers.update({",
         "                'X-Auth-Token': self.token,",
         "                'Content-Type': 'application/json'",
         "            })",
         "        except requests.exceptions.RequestException as e:",
+        "            print(f\"Authentication failed with error: {str(e)}\")",
+        "            print(f\"Full error details: {e.__dict__}\")",
         "            raise Exception(f'Error getting auth token: {e}')",
         "",
         "    def _handle_request(self, method: str, url: str, **kwargs) -> Dict:",
         "        \"\"\"Handle API request with token refresh if needed\"\"\"",
         "        try:",
         "            response = self.session.request(method, url, **kwargs)",
-        "            ",
+        "",
         "            # If we get a 401, try to refresh the token and retry once",
         "            if response.status_code == 401:",
         "                self.authenticate()",
@@ -157,9 +177,6 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
         "        except requests.exceptions.RequestException as e:",
         "            raise Exception(f'API request failed: {e}')",
         "",
-        "# Create a singleton instance",
-        "client = APIClient()",
-        ""
     ]
 
     # Process each endpoint
@@ -184,8 +201,8 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
                 else:
                     param_list.append(f"{param_name}: Optional[{param_type}] = None")
             
-            # Add method to the client instance instead of the class
-            method_sig = f"def {method_name}(self"
+            # Add method to the class
+            method_sig = f"    def {method_name}(self"  # Added 4 spaces for class method indentation
             if param_list:
                 method_sig += ", " + ", ".join(param_list)
             method_sig += ") -> Dict[str, Any]:"
@@ -271,6 +288,16 @@ def generate_api_methods(swagger: Dict[str, Any]) -> str:
                 lines.append(f"        return self._handle_request('{method}', url, params=params, headers=request_headers, json=json_data)")
             else:
                 lines.append(f"        return self._handle_request('{method}', url, params=params, headers=request_headers)")
+            
+            lines.append("")  # Add blank line between methods
+
+    # Add the singleton instance after all methods are defined
+    lines.extend([
+        "",
+        "# Create a singleton instance",
+        "client = APIClient()",
+        ""
+    ])
     
     return "\n".join(lines)
 

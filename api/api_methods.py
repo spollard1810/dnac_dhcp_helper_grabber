@@ -52,28 +52,48 @@ class APIClient:
         """Authenticate with DNA Center and get token"""
         url = f"https://{self.host}/dna/system/api/v1/auth/token"
 
+        print(f"\nDebug - Authentication attempt:")
+        print(f"URL: {url}")
+        print(f"Username: {self.username}")
+        print(f"Using HTTPBasicAuth: {HTTPBasicAuth(self.username, self.password)}")
+
         try:
-            response = requests.post(
+            # Create a new session just for auth to avoid any header conflicts
+            auth_session = requests.Session()
+            auth_session.verify = False
+
+            print("\nMaking authentication request...")
+            response = auth_session.post(
                 url,
                 auth=HTTPBasicAuth(self.username, self.password),
                 verify=False
             )
+
+            print(f"Response status code: {response.status_code}")
+            print(f"Response headers: {response.headers}")
+
+            if response.status_code != 200:
+                print(f"Response content: {response.text}")
+
             response.raise_for_status()
             self.token = response.json()['Token']
-            
+            print(f"Successfully got token: {self.token[:10]}...")
+
             # Update session headers with new token
             self.session.headers.update({
                 'X-Auth-Token': self.token,
                 'Content-Type': 'application/json'
             })
         except requests.exceptions.RequestException as e:
+            print(f"Authentication failed with error: {str(e)}")
+            print(f"Full error details: {e.__dict__}")
             raise Exception(f'Error getting auth token: {e}')
 
     def _handle_request(self, method: str, url: str, **kwargs) -> Dict:
         """Handle API request with token refresh if needed"""
         try:
             response = self.session.request(method, url, **kwargs)
-            
+
             # If we get a 401, try to refresh the token and retry once
             if response.status_code == 401:
                 self.authenticate()
@@ -84,10 +104,7 @@ class APIClient:
         except requests.exceptions.RequestException as e:
             raise Exception(f'API request failed: {e}')
 
-# Create a singleton instance
-client = APIClient()
-
-def post_dna_intent_api_v1_images_image_id_site_wise_product_names(self, content__type: Any, image_id: Any) -> Dict[str, Any]:
+    def post_dna_intent_api_v1_images_image_id_site_wise_product_names(self, content__type: Any, image_id: Any) -> Dict[str, Any]:
         """Assign network device product name to the given software image
 
         Assign network device product name and sites for the given image identifier. Refer `/dna/intent/api/v1/images` API for obtaining imageId
@@ -110,7 +127,8 @@ def post_dna_intent_api_v1_images_image_id_site_wise_product_names(self, content
         url = url.format(image_id=image_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images_image_id_site_wise_product_names(self, image_id: Any, product_name: Optional[Any] = None, product_id: Optional[Any] = None, recommended: Optional[Any] = None, assigned: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images_image_id_site_wise_product_names(self, image_id: Any, product_name: Optional[Any] = None, product_id: Optional[Any] = None, recommended: Optional[Any] = None, assigned: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves network device product names assigned to a software image.
 
         Returns a list of network device product names and associated sites for a given image identifier. Refer `/dna/intent/api/v1/images` API for obtaining `imageId`.
@@ -144,7 +162,8 @@ def get_dna_intent_api_v1_images_image_id_site_wise_product_names(self, image_id
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_template_programmer_template_version_template_id(self, template_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_template_programmer_template_version_template_id(self, template_id: Any) -> Dict[str, Any]:
         """Gets all the versions of a given template
 
         Get all the versions of template by its id
@@ -164,7 +183,8 @@ def get_dna_intent_api_v1_template_programmer_template_version_template_id(self,
         url = url.format(template_id=template_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_accesspoint_configuration(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_accesspoint_configuration(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
         """Configure Access Points V1
 
         User can configure multiple access points with required options using this intent API.
@@ -186,7 +206,8 @@ This API does not support configuration of CleanAir or SI for IOS-XE devices wit
         url = self.base_url + '/dna/intent/api/v1/wireless/accesspoint-configuration'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_template_programmer_template_deploy(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_template_programmer_template_deploy(self, content__type: Any) -> Dict[str, Any]:
         """Deploy Template V2
 
         V2 API to deploy a template.
@@ -207,7 +228,8 @@ def post_dna_intent_api_v2_template_programmer_template_deploy(self, content__ty
         url = self.base_url + '/dna/intent/api/v2/template-programmer/template/deploy'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_site_wise_product_names_count(self, site_id: Optional[Any] = None, product_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_site_wise_product_names_count(self, site_id: Optional[Any] = None, product_name: Optional[Any] = None) -> Dict[str, Any]:
         """Returns the count of network device product names for a site
 
         Returns the count of network device product names for given filters. The default value of `siteId` is global.
@@ -231,7 +253,8 @@ def get_dna_intent_api_v1_site_wise_product_names_count(self, site_id: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_multicast_virtual_networks(self, fabric_id: Optional[Any] = None, virtual_network_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_multicast_virtual_networks(self, fabric_id: Optional[Any] = None, virtual_network_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get multicast virtual networks
 
         Returns a list of multicast configurations for virtual networks that match the provided query parameters.
@@ -259,7 +282,8 @@ def get_dna_intent_api_v1_sda_multicast_virtual_networks(self, fabric_id: Option
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_multicast_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_multicast_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
         """Add multicast virtual networks
 
         Adds multicast for virtual networks based on user input.
@@ -280,7 +304,8 @@ def post_dna_intent_api_v1_sda_multicast_virtual_networks(self, content__type: A
         url = self.base_url + '/dna/intent/api/v1/sda/multicast/virtualNetworks'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_multicast_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_multicast_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
         """Update multicast virtual networks
 
         Updates multicast configurations for virtual networks based on user input.
@@ -301,7 +326,8 @@ def put_dna_intent_api_v1_sda_multicast_virtual_networks(self, content__type: An
         url = self.base_url + '/dna/intent/api/v1/sda/multicast/virtualNetworks'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_network_devices_id_trend_analytics(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_network_devices_id_trend_analytics(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """The Trend analytics data for the network Device in the specified time range
 
         The Trend analytics data for the network Device in the specified time range. The data is grouped based on the trend time Interval, other input parameters like attribute and aggregate attributes. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -324,7 +350,8 @@ def post_dna_data_api_v1_network_devices_id_trend_analytics(self, content__type:
         url = url.format(id=id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_devices_device_controllability_settings(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_devices_device_controllability_settings(self) -> Dict[str, Any]:
         """Get device controllability settings
 
         Device Controllability is a system-level process on Catalyst Center that enforces state synchronization for some device-layer features. Its purpose is to aid in the deployment of required network settings that Catalyst Center needs to manage devices. Changes are made on network devices during discovery, when adding a device to Inventory, or when assigning a device to a site. If changes are made to any settings that are under the scope of this process, these changes are applied to the network devices during the Provision and Update Telemetry Settings operations, even if Device Controllability is disabled. The following device settings will be enabled as part of Device Controllability when devices are discovered. - SNMP Credentials. - NETCONF Credentials. Subsequent to discovery, devices will be added to Inventory. The following device settings will be enabled when devices are added to inventory. - Cisco TrustSec (CTS) Credentials. The following device settings will be enabled when devices are assigned to a site. Some of these settings can be defined at a site level under Design > Network Settings > Telemetry & Wireless. - Wired Endpoint Data Collection Enablement. - Controller Certificates. - SNMP Trap Server Definitions. - Syslog Server Definitions. - Application Visibility. - Application QoS Policy. - Wireless Service Assurance (WSA). - Wireless Telemetry. - DTLS Ciphersuite. - AP Impersonation. If Device Controllability is disabled, Catalyst Center does not configure any of the preceding credentials or settings on devices during discovery, at runtime, or during site assignment. However, the telemetry settings and related configuration are pushed when the device is provisioned or when the update Telemetry Settings action is performed. Catalyst Center identifies and automatically corrects the following telemetry configuration issues on the device. - SWIM certificate issue. - IOS WLC NA certificate issue. - PKCS12 certificate issue. - IOS telemetry configuration issu
@@ -340,7 +367,8 @@ def get_dna_intent_api_v1_network_devices_device_controllability_settings(self) 
         url = self.base_url + '/dna/intent/api/v1/networkDevices/deviceControllability/settings'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_devices_device_controllability_settings(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_devices_device_controllability_settings(self, content__type: Any) -> Dict[str, Any]:
         """Update device controllability settings
 
         Device Controllability is a system-level process on Catalyst Center that enforces state
@@ -406,7 +434,8 @@ The autocorrect telemetry config feature is supported only when Device Controlla
         url = self.base_url + '/dna/intent/api/v1/networkDevices/deviceControllability/settings'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_id_chassis(self, device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_id_chassis(self, device_id: Any) -> Dict[str, Any]:
         """Get Chassis Details for Device
 
         Returns chassis details for given device ID
@@ -426,7 +455,8 @@ def get_dna_intent_api_v1_network_device_device_id_chassis(self, device_id: Any)
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_buildings_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_buildings_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Updates a building
 
         Updates a building in the network hierarchy.
@@ -449,7 +479,8 @@ def put_dna_intent_api_v2_buildings_id(self, content__type: Any, id: Any) -> Dic
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v2_buildings_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v2_buildings_id(self, id: Any) -> Dict[str, Any]:
         """Deletes a building
 
         Deletes building in the network hierarchy. This operations fails if there are any floors for this building, or if there are any devices assigned to this building.
@@ -469,7 +500,8 @@ def delete_dna_intent_api_v2_buildings_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_buildings_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_buildings_id(self, id: Any) -> Dict[str, Any]:
         """Gets a building
 
         Gets a building in the network hierarchy.
@@ -489,7 +521,8 @@ def get_dna_intent_api_v2_buildings_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_devices_unassign_from_site_apply(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_devices_unassign_from_site_apply(self, content__type: Any) -> Dict[str, Any]:
         """Unassign network devices from sites
 
         Unassign unprovisioned network devices from their site. If device controllability is enabled, it will be triggered once device unassigned from site successfully. Device Controllability can be enabled/disabled using `/dna/intent/api/v1/networkDevices/deviceControllability/settings`.
@@ -510,7 +543,8 @@ def post_dna_intent_api_v1_network_devices_unassign_from_site_apply(self, conten
         url = self.base_url + '/dna/intent/api/v1/networkDevices/unassignFromSite/apply'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_count(self) -> Dict[str, Any]:
         """Get count of all discovery jobs
 
         Returns the count of all available discovery jobs
@@ -526,7 +560,8 @@ def get_dna_intent_api_v1_discovery_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/discovery/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_data_view_groups_view_group_id(self, view_group_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_data_view_groups_view_group_id(self, view_group_id: Any) -> Dict[str, Any]:
         """Get views for a given view group
 
         Gives a list of summary of all views in a viewgroup. Use "Get all view groups" API to get the viewGroupIds (required as a query param for this API) for available viewgroups.
@@ -546,7 +581,8 @@ def get_dna_intent_api_v1_data_view_groups_view_group_id(self, view_group_id: An
         url = url.format(view_group_id=view_group_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_onboarding_pnp_device_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_onboarding_pnp_device_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update Device
 
         Updates device details specified by device id in PnP database
@@ -569,7 +605,8 @@ def put_dna_intent_api_v1_onboarding_pnp_device_id(self, content__type: Any, id:
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_device_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_device_id(self, id: Any) -> Dict[str, Any]:
         """Get Device by Id
 
         Returns device details specified by device id
@@ -589,7 +626,8 @@ def get_dna_intent_api_v1_onboarding_pnp_device_id(self, id: Any) -> Dict[str, A
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_onboarding_pnp_device_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_onboarding_pnp_device_id(self, id: Any) -> Dict[str, Any]:
         """Delete Device by Id from PnP
 
         Deletes specified device from PnP database
@@ -609,7 +647,8 @@ def delete_dna_intent_api_v1_onboarding_pnp_device_id(self, id: Any) -> Dict[str
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids(self, content__type: Any, fabric_id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids(self, content__type: Any, fabric_id: Any) -> Dict[str, Any]:
         """Add, Update or Remove SSID mapping to a VLAN
 
         Add, update, or remove SSID mappings to a VLAN. If the payload doesn't contain a 'vlanName' which has SSIDs mapping done earlier then all the mapped SSIDs of the 'vlanName' is cleared. The request must include all SSIDs currently mapped to a VLAN, as determined by the response from the GET operation for the same fabricId used in the request. If an already-mapped SSID is not included in the payload, its mapping will be removed by this API. Conversely, if a new SSID is provided, it will be added to the Mapping. Ensure that any new SSID added is a Fabric SSID. This API can also be used to add a VLAN and associate the relevant SSIDs with it. The 'vlanName' must be 'Fabric Wireless Enabled' and should be part of the Fabric Site representing 'Fabric ID' specified in the API request.
@@ -632,7 +671,8 @@ def put_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids(self, content__typ
         url = url.format(fabric_id=fabric_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids(self, content__type: Any, fabric_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids(self, content__type: Any, fabric_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve the VLANs and SSIDs mapped to the VLAN within a Fabric Site.
 
         Retrieve the VLANs and SSIDs mapped to the VLAN, within a Fabric Site. The 'fabricId' represents the Fabric ID of a particular Fabric Site.
@@ -661,7 +701,8 @@ def get_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids(self, content__typ
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_images_distribution_server_settings(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_images_distribution_server_settings(self, content__type: Any) -> Dict[str, Any]:
         """Add image distribution server
 
         Add remote server for distributing software images. Upto two such distribution servers are supported.
@@ -682,7 +723,8 @@ def post_dna_intent_api_v1_images_distribution_server_settings(self, content__ty
         url = self.base_url + '/dna/intent/api/v1/images/distributionServerSettings'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images_distribution_server_settings(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images_distribution_server_settings(self) -> Dict[str, Any]:
         """Retrieve image distribution servers
 
         Retrieve the list of remote image distribution servers. There can be up to two remote servers.Product always acts as local distribution server, and it is not part of this API response.
@@ -698,7 +740,8 @@ def get_dna_intent_api_v1_images_distribution_server_settings(self) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/images/distributionServerSettings'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_app_policy_queuing_profile_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_app_policy_queuing_profile_id(self, id: Any) -> Dict[str, Any]:
         """Delete Application Policy Queuing Profile
 
         Delete existing custom application policy queuing profile by id
@@ -718,7 +761,8 @@ def delete_dna_intent_api_v1_app_policy_queuing_profile_id(self, id: Any) -> Dic
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tags_network_devices_members_associations(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tags_network_devices_members_associations(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve tags associated with network devices.
 
         Fetches the tags associated with network devices. Devices that don't have any tags associated will not be included in the response. A tag is a user-defined or system-defined construct to group resources. When a device is tagged, it is called a member of the tag.
@@ -742,7 +786,8 @@ def get_dna_intent_api_v1_tags_network_devices_members_associations(self, offset
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_template_programmer_template_deploy_status_deployment_id(self, deployment_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_template_programmer_template_deploy_status_deployment_id(self, deployment_id: Any) -> Dict[str, Any]:
         """Status of template deployment
 
         API to retrieve the status of template deployment.
@@ -762,7 +807,8 @@ def get_dna_intent_api_v1_template_programmer_template_deploy_status_deployment_
         url = url.format(deployment_id=deployment_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device_unclaim(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device_unclaim(self, content__type: Any) -> Dict[str, Any]:
         """Un-Claim Device
 
         Un-Claims one of more devices with specified workflow (Deprecated).
@@ -783,7 +829,8 @@ def post_dna_intent_api_v1_onboarding_pnp_device_unclaim(self, content__type: An
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device/unclaim'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_integration_settings_instances_itsm(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_integration_settings_instances_itsm(self) -> Dict[str, Any]:
         """Create ITSM Integration setting
 
         Creates ITSM Integration setting
@@ -799,7 +846,8 @@ def post_dna_intent_api_v1_integration_settings_instances_itsm(self) -> Dict[str
         url = self.base_url + '/dna/intent/api/v1/integration-settings/instances/itsm'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_system_issue_definitions_id(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_system_issue_definitions_id(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Issue trigger definition update.
 
         Update issue trigger threshold, priority for the given id.
@@ -828,7 +876,8 @@ Also enable or disable issue trigger for the given id. For detailed information 
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_system_issue_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_system_issue_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get issue trigger definition for given id.
 
         Get system issue defintion for the given id. Definition includes all properties from IssueTriggerDefinition schema by default. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-issueAndHealthDefinitions-1.0.0-resolved.yaml
@@ -852,7 +901,8 @@ def get_dna_intent_api_v1_system_issue_definitions_id(self, id: Any, x__c_a_l_l_
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_network_devices_trend_analytics(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_network_devices_trend_analytics(self, content__type: Any) -> Dict[str, Any]:
         """Gets the Trend analytics data.
 
         Gets the Trend analytics Network device data for the given time range. The data will be grouped based on the given trend time Interval. The required property for this API is `trendInterval`. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -873,7 +923,8 @@ def post_dna_data_api_v1_network_devices_trend_analytics(self, content__type: An
         url = self.base_url + '/dna/data/api/v1/networkDevices/trendAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_banner_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_banner_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set banner settings for a site
 
         Set banner settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the settings is unset.
@@ -896,7 +947,8 @@ def put_dna_intent_api_v1_sites_id_banner_settings(self, content__type: Any, id:
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_banner_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_banner_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve banner settings for a site
 
         Retrieve banner settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the setting is unset at a site.
@@ -920,7 +972,8 @@ def get_dna_intent_api_v1_sites_id_banner_settings(self, id: Any, inherited: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_devices_assigned_to_site(self, site_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_devices_assigned_to_site(self, site_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get site assigned network devices
 
         Get all site assigned network devices. The items in the list are arranged in an order that corresponds with their internal identifiers.
@@ -946,7 +999,8 @@ def get_dna_intent_api_v1_network_devices_assigned_to_site(self, site_id: Any, o
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_snmp_config(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_snmp_config(self, content__type: Any) -> Dict[str, Any]:
         """Create SNMP Destination
 
         Create SNMP Destination
@@ -967,7 +1021,8 @@ def post_dna_intent_api_v1_event_snmp_config(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/event/snmp-config'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_snmp_config(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_snmp_config(self, content__type: Any) -> Dict[str, Any]:
         """Update SNMP Destination
 
         Update SNMP Destination
@@ -988,7 +1043,8 @@ def put_dna_intent_api_v1_event_snmp_config(self, content__type: Any) -> Dict[st
         url = self.base_url + '/dna/intent/api/v1/event/snmp-config'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_device_credentials_status(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_device_credentials_status(self, id: Any) -> Dict[str, Any]:
         """Get network devices credentials sync status
 
         Get network devices credentials sync status at a given site.
@@ -1008,7 +1064,8 @@ def get_dna_intent_api_v1_sites_id_device_credentials_status(self, id: Any) -> D
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_image_importation(self, image_uuid: Optional[Any] = None, name: Optional[Any] = None, family: Optional[Any] = None, application_type: Optional[Any] = None, image_integrity_status: Optional[Any] = None, version: Optional[Any] = None, image_series: Optional[Any] = None, image_name: Optional[Any] = None, is_tagged_golden: Optional[Any] = None, is_c_c_o_recommended: Optional[Any] = None, is_c_c_o_latest: Optional[Any] = None, created_time: Optional[Any] = None, image_size_greater_than: Optional[Any] = None, image_size_lesser_than: Optional[Any] = None, sort_by: Optional[Any] = None, sort_order: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_image_importation(self, image_uuid: Optional[Any] = None, name: Optional[Any] = None, family: Optional[Any] = None, application_type: Optional[Any] = None, image_integrity_status: Optional[Any] = None, version: Optional[Any] = None, image_series: Optional[Any] = None, image_name: Optional[Any] = None, is_tagged_golden: Optional[Any] = None, is_c_c_o_recommended: Optional[Any] = None, is_c_c_o_latest: Optional[Any] = None, created_time: Optional[Any] = None, image_size_greater_than: Optional[Any] = None, image_size_lesser_than: Optional[Any] = None, sort_by: Optional[Any] = None, sort_order: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get software image details
 
         Returns software image list based on a filter criteria. For example: "filterbyName = cat3k%"
@@ -1064,7 +1121,8 @@ def get_dna_intent_api_v1_image_importation(self, image_uuid: Optional[Any] = No
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_wireless_settings_interfaces_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_wireless_settings_interfaces_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update Interface
 
         This API allows the user to update an interface by ID
@@ -1087,7 +1145,8 @@ def put_dna_intent_api_v1_wireless_settings_interfaces_id(self, content__type: A
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_wireless_settings_interfaces_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_wireless_settings_interfaces_id(self, id: Any) -> Dict[str, Any]:
         """Delete Interface
 
         This API allows the user to delete an interface by ID
@@ -1107,7 +1166,8 @@ def delete_dna_intent_api_v1_wireless_settings_interfaces_id(self, id: Any) -> D
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_interfaces_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_interfaces_id(self, id: Any) -> Dict[str, Any]:
         """Get Interface by ID
 
         This API allows the user to get an interface by ID
@@ -1127,7 +1187,8 @@ def get_dna_intent_api_v1_wireless_settings_interfaces_id(self, id: Any) -> Dict
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_anycast_gateways(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_anycast_gateways(self, content__type: Any) -> Dict[str, Any]:
         """Update anycast gateways
 
         Updates anycast gateways based on user input.
@@ -1148,7 +1209,8 @@ def put_dna_intent_api_v1_sda_anycast_gateways(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/intent/api/v1/sda/anycastGateways'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_anycast_gateways(self, id: Optional[Any] = None, fabric_id: Optional[Any] = None, virtual_network_name: Optional[Any] = None, ip_pool_name: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_anycast_gateways(self, id: Optional[Any] = None, fabric_id: Optional[Any] = None, virtual_network_name: Optional[Any] = None, ip_pool_name: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get anycast gateways
 
         Returns a list of anycast gateways that match the provided query parameters.
@@ -1184,7 +1246,8 @@ def get_dna_intent_api_v1_sda_anycast_gateways(self, id: Optional[Any] = None, f
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_anycast_gateways(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_anycast_gateways(self, content__type: Any) -> Dict[str, Any]:
         """Add anycast gateways
 
         Adds anycast gateways based on user input.
@@ -1205,7 +1268,8 @@ def post_dna_intent_api_v1_sda_anycast_gateways(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/intent/api/v1/sda/anycastGateways'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_application_policy_application_set(self, attributes: Any, offset: Any, limit: Any, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_application_policy_application_set(self, attributes: Any, offset: Any, limit: Any, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Application Set/s
 
         Get application set/s by offset/limit or by name
@@ -1233,7 +1297,8 @@ def get_dna_intent_api_v2_application_policy_application_set(self, attributes: A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_application_policy_application_set(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_application_policy_application_set(self, content__type: Any) -> Dict[str, Any]:
         """Create Application Set/s
 
         Create new custom application set/s
@@ -1254,7 +1319,8 @@ def post_dna_intent_api_v2_application_policy_application_set(self, content__typ
         url = self.base_url + '/dna/intent/api/v2/application-policy-application-set'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_tag_id_member(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_tag_id_member(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Add members to the tag
 
         Adds members to the tag specified by id
@@ -1277,7 +1343,8 @@ def post_dna_intent_api_v1_tag_id_member(self, content__type: Any, id: Any) -> D
         url = url.format(id=id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tag_id_member(self, id: Any, member_type: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, member_association_type: Optional[Any] = None, level: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tag_id_member(self, id: Any, member_type: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, member_association_type: Optional[Any] = None, level: Optional[Any] = None) -> Dict[str, Any]:
         """Get Tag members by Id
 
         Returns tag members specified by id
@@ -1309,7 +1376,8 @@ def get_dna_intent_api_v1_tag_id_member(self, id: Any, member_type: Any, offset:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_sites_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_sites_count(self) -> Dict[str, Any]:
         """Get fabric site count
 
         Returns the count of fabric sites that match the provided query parameters.
@@ -1325,7 +1393,8 @@ def get_dna_intent_api_v1_sda_fabric_sites_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/sda/fabricSites/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostic_validation_sets(self, view: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostic_validation_sets(self, view: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves all the validation sets
 
         Retrieves all the validation sets and optionally the contained validations
@@ -1348,7 +1417,8 @@ def get_dna_intent_api_v1_diagnostic_validation_sets(self, view: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments(self, profile_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments(self, profile_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the list of sites that the given network profile for sites is assigned to
 
         Retrieves the list of sites that the given network profile for sites is assigned to.
@@ -1377,7 +1447,8 @@ The list includes the sites the profile has been directly assigned to, as well a
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments(self, content__type: Any, profile_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments(self, content__type: Any, profile_id: Any) -> Dict[str, Any]:
         """Assign a network profile for sites to the given site
 
         Assigns a given network profile for sites to a given site. Also assigns the profile to child sites.
@@ -1400,7 +1471,8 @@ def post_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignment
         url = url.format(profile_id=profile_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs_count(self, fabric_id: Any, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs_count(self, fabric_id: Any, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices layer 2 handoffs count
 
         Returns the count of layer 2 handoffs of fabric devices that match the provided query parameters.
@@ -1424,7 +1496,8 @@ def get_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs_count(self, fabric_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_access_points_provision(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_access_points_provision(self, content__type: Any) -> Dict[str, Any]:
         """AP Provision
 
         This API is used to provision access points
@@ -1445,7 +1518,8 @@ def post_dna_intent_api_v1_wireless_access_points_provision(self, content__type:
         url = self.base_url + '/dna/intent/api/v1/wirelessAccessPoints/provision'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription_count(self, event_ids: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription_count(self, event_ids: Any) -> Dict[str, Any]:
         """Count of Event Subscriptions
 
         Returns the Count of EventSubscriptions
@@ -1467,7 +1541,8 @@ def get_dna_intent_api_v1_event_subscription_count(self, event_ids: Any) -> Dict
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sites_site_id_wireless_settings_ssids(self, content__type: Any, site_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sites_site_id_wireless_settings_ssids(self, content__type: Any, site_id: Any) -> Dict[str, Any]:
         """Create SSID
 
         This API allows the user to create an SSID (Service Set Identifier) at the Global site
@@ -1490,7 +1565,8 @@ def post_dna_intent_api_v1_sites_site_id_wireless_settings_ssids(self, content__
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids(self, site_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids(self, site_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get SSID by Site
 
         This API allows the user to get all SSIDs (Service Set Identifier) at the given site
@@ -1516,7 +1592,8 @@ def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids(self, site_id: A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, instance_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, instance_id: Any) -> Dict[str, Any]:
         """Get ITSM Integration setting by Id
 
         Fetches ITSM Integration setting by ID
@@ -1536,7 +1613,8 @@ def get_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, 
         url = url.format(instance_id=instance_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, instance_id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, instance_id: Any) -> Dict[str, Any]:
         """Update ITSM Integration setting
 
         Updates the ITSM Integration setting
@@ -1556,7 +1634,8 @@ def put_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, 
         url = url.format(instance_id=instance_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, instance_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(self, instance_id: Any) -> Dict[str, Any]:
         """Delete ITSM Integration setting
 
          Deletes the ITSM Integration setting
@@ -1576,7 +1655,8 @@ def delete_dna_intent_api_v1_integration_settings_instances_itsm_instance_id(sel
         url = url.format(instance_id=instance_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_assurance_events_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, attribute: Optional[Any] = None, view: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_assurance_events_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, attribute: Optional[Any] = None, view: Optional[Any] = None) -> Dict[str, Any]:
         """Get details of a single assurance event
 
         API to fetch the details of an assurance event using event `id`. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceEvents-1.0.0-resolved.yaml
@@ -1618,7 +1698,8 @@ def get_dna_data_api_v1_assurance_events_id(self, id: Any, x__c_a_l_l_e_r__i_d: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_image_importation_source_file(self, content__type: Any, is_third_party: Optional[Any] = None, third_party_vendor: Optional[Any] = None, third_party_image_family: Optional[Any] = None, third_party_application_type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_image_importation_source_file(self, content__type: Any, is_third_party: Optional[Any] = None, third_party_vendor: Optional[Any] = None, third_party_image_family: Optional[Any] = None, third_party_application_type: Optional[Any] = None) -> Dict[str, Any]:
         """Import local software image
 
         Fetches a software image from local file system and uploads to DNA Center. Supported software image files extensions are bin, img, tar, smu, pie, aes, iso, ova, tar_gz and qcow2
@@ -1649,7 +1730,8 @@ def post_dna_intent_api_v1_image_importation_source_file(self, content__type: An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_clone_name_name_project_project_id_template_template_id(self, content__type: Any, name: Any, template_id: Any, project_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_clone_name_name_project_project_id_template_template_id(self, content__type: Any, name: Any, template_id: Any, project_id: Optional[Any] = None) -> Dict[str, Any]:
         """Creates a clone of the given template
 
         API to clone template
@@ -1677,7 +1759,8 @@ def post_dna_intent_api_v1_template_programmer_clone_name_name_project_project_i
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_rf_profiles(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_rf_profiles(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get RF Profiles
 
         This API allows the user to get all RF Profiles
@@ -1701,7 +1784,8 @@ def get_dna_intent_api_v1_wireless_settings_rf_profiles(self, limit: Optional[An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_settings_rf_profiles(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_settings_rf_profiles(self, content__type: Any) -> Dict[str, Any]:
         """Create RF Profile
 
         This API allows the user to create a custom RF Profile
@@ -1722,7 +1806,8 @@ def post_dna_intent_api_v1_wireless_settings_rf_profiles(self, content__type: An
         url = self.base_url + '/dna/intent/api/v1/wirelessSettings/rfProfiles'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_telemetry_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_telemetry_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve Telemetry settings for a site
 
         Retrieves telemetry settings for the given site. `null` values indicate that the setting will be inherited from the parent site.
@@ -1746,7 +1831,8 @@ def get_dna_intent_api_v1_sites_id_telemetry_settings(self, id: Any, inherited: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_telemetry_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_telemetry_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set Telemetry settings for a site
 
         Sets telemetry settings for the given site; `null` values indicate that the setting will be inherited from the parent site.
@@ -1769,7 +1855,8 @@ def put_dna_intent_api_v1_sites_id_telemetry_settings(self, content__type: Any, 
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_user_defined_field(self, id: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_user_defined_field(self, id: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get All User-Defined-Fields
 
         Gets existing global User Defined Fields. If no input is given, it fetches ALL the Global UDFs. Filter/search is supported by UDF Id(s) or UDF name(s) or both.
@@ -1793,7 +1880,8 @@ def get_dna_intent_api_v1_network_device_user_defined_field(self, id: Optional[A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_device_user_defined_field(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_device_user_defined_field(self) -> Dict[str, Any]:
         """Create User-Defined-Field
 
         Creates a new global User Defined Field, which can be assigned to devices
@@ -1809,7 +1897,8 @@ def post_dna_intent_api_v1_network_device_user_defined_field(self) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/network-device/user-defined-field'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_assurance_events(self, device_family: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, message_type: Optional[Any] = None, severity: Optional[Any] = None, site_id: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, network_device_name: Optional[Any] = None, network_device_id: Optional[Any] = None, ap_mac: Optional[Any] = None, client_mac: Optional[Any] = None, attribute: Optional[Any] = None, view: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_assurance_events(self, device_family: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, message_type: Optional[Any] = None, severity: Optional[Any] = None, site_id: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, network_device_name: Optional[Any] = None, network_device_id: Optional[Any] = None, ap_mac: Optional[Any] = None, client_mac: Optional[Any] = None, attribute: Optional[Any] = None, view: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Query assurance events
 
         Returns the list of events discovered by Catalyst Center, determined by the complex filters. Please refer to the 'API Support Documentation' section to understand which fields are supported. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceEvents-1.0.0-resolved.yaml
@@ -1963,7 +2052,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_floors_settings(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_floors_settings(self) -> Dict[str, Any]:
         """Updates floor settings
 
         Updates UI user preference for floor unit system. Unit sytem change will effect for all floors across all sites.
@@ -1979,7 +2069,8 @@ def put_dna_intent_api_v2_floors_settings(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/floors/settings'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_floors_settings(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_floors_settings(self) -> Dict[str, Any]:
         """Get floor settings
 
         Gets UI user preference for floor unit system.
@@ -1995,7 +2086,8 @@ def get_dna_intent_api_v2_floors_settings(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/floors/settings'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_assurance_issues_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, is_global: Optional[Any] = None, priority: Optional[Any] = None, severity: Optional[Any] = None, status: Optional[Any] = None, entity_type: Optional[Any] = None, category: Optional[Any] = None, device_type: Optional[Any] = None, name: Optional[Any] = None, issue_id: Optional[Any] = None, entity_id: Optional[Any] = None, updated_by: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_name: Optional[Any] = None, site_id: Optional[Any] = None, fabric_site_id: Optional[Any] = None, fabric_vn_name: Optional[Any] = None, fabric_transit_site_id: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, ai_driven: Optional[Any] = None, fabric_driven: Optional[Any] = None, fabric_site_driven: Optional[Any] = None, fabric_vn_driven: Optional[Any] = None, fabric_transit_driven: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_assurance_issues_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, is_global: Optional[Any] = None, priority: Optional[Any] = None, severity: Optional[Any] = None, status: Optional[Any] = None, entity_type: Optional[Any] = None, category: Optional[Any] = None, device_type: Optional[Any] = None, name: Optional[Any] = None, issue_id: Optional[Any] = None, entity_id: Optional[Any] = None, updated_by: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_name: Optional[Any] = None, site_id: Optional[Any] = None, fabric_site_id: Optional[Any] = None, fabric_vn_name: Optional[Any] = None, fabric_transit_site_id: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, ai_driven: Optional[Any] = None, fabric_driven: Optional[Any] = None, fabric_site_driven: Optional[Any] = None, fabric_vn_driven: Optional[Any] = None, fabric_transit_driven: Optional[Any] = None) -> Dict[str, Any]:
         """Get the total number of issues for given set of filters
 
         Returns the total number issues for given set of filters. If there is no start and/or end time, then end time will be defaulted to current time and start time will be defaulted to 24-hours ago from end time. https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -2167,7 +2259,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_tag(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_tag(self, content__type: Any) -> Dict[str, Any]:
         """Create Tag
 
         Creates tag with specified tag attributes
@@ -2188,7 +2281,8 @@ def post_dna_intent_api_v1_tag(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/tag'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_tag(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_tag(self, content__type: Any) -> Dict[str, Any]:
         """Update Tag
 
         Updates a tag specified by id
@@ -2209,7 +2303,8 @@ def put_dna_intent_api_v1_tag(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/tag'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tag(self, name: Optional[Any] = None, additional_info_name_space: Optional[Any] = None, additional_info_attributes: Optional[Any] = None, level: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, size: Optional[Any] = None, field: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, system_tag: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tag(self, name: Optional[Any] = None, additional_info_name_space: Optional[Any] = None, additional_info_attributes: Optional[Any] = None, level: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, size: Optional[Any] = None, field: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, system_tag: Optional[Any] = None) -> Dict[str, Any]:
         """Get Tag
 
         Returns the tags for given filter criteria
@@ -2251,7 +2346,8 @@ def get_dna_intent_api_v1_tag(self, name: Optional[Any] = None, additional_info_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_lan_automation_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_lan_automation_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """LAN Automation Stop and Update Devices
 
         Invoke this API to stop LAN Automation and Update Loopback0 IP Address of Devices, discovered in the current session
@@ -2274,7 +2370,8 @@ def put_dna_intent_api_v1_lan_automation_id(self, content__type: Any, id: Any) -
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_lan_automation_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_lan_automation_id(self, id: Any) -> Dict[str, Any]:
         """LAN Automation Stop
 
         Invoke this API to stop LAN Automation for the given site. 
@@ -2294,7 +2391,8 @@ def delete_dna_intent_api_v1_lan_automation_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_layer2_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_layer2_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
         """Update layer 2 virtual networks
 
         Updates layer 2 virtual networks based on user input.
@@ -2315,7 +2413,8 @@ def put_dna_intent_api_v1_sda_layer2_virtual_networks(self, content__type: Any) 
         url = self.base_url + '/dna/intent/api/v1/sda/layer2VirtualNetworks'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_layer2_virtual_networks(self, id: Optional[Any] = None, fabric_id: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, traffic_type: Optional[Any] = None, associated_layer3_virtual_network_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_layer2_virtual_networks(self, id: Optional[Any] = None, fabric_id: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, traffic_type: Optional[Any] = None, associated_layer3_virtual_network_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get layer 2 virtual networks
 
         Returns a list of layer 2 virtual networks that match the provided query parameters.
@@ -2351,7 +2450,8 @@ def get_dna_intent_api_v1_sda_layer2_virtual_networks(self, id: Optional[Any] = 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_layer2_virtual_networks(self, fabric_id: Any, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, traffic_type: Optional[Any] = None, associated_layer3_virtual_network_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_layer2_virtual_networks(self, fabric_id: Any, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, traffic_type: Optional[Any] = None, associated_layer3_virtual_network_name: Optional[Any] = None) -> Dict[str, Any]:
         """Delete layer 2 virtual networks
 
         Deletes layer 2 virtual networks based on user input.
@@ -2381,7 +2481,8 @@ def delete_dna_intent_api_v1_sda_layer2_virtual_networks(self, fabric_id: Any, v
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_layer2_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_layer2_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
         """Add layer 2 virtual networks
 
         Adds layer 2 virtual networks based on user input.
@@ -2402,7 +2503,8 @@ def post_dna_intent_api_v1_sda_layer2_virtual_networks(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/sda/layer2VirtualNetworks'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_zones_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_zones_count(self) -> Dict[str, Any]:
         """Get fabric zone count
 
         Returns the count of fabric zones that match the provided query parameters.
@@ -2418,7 +2520,8 @@ def get_dna_intent_api_v1_sda_fabric_zones_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/sda/fabricZones/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_webhook(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_webhook(self, content__type: Any) -> Dict[str, Any]:
         """Update Webhook Destination
 
         Update Webhook Destination
@@ -2439,7 +2542,8 @@ def put_dna_intent_api_v1_event_webhook(self, content__type: Any) -> Dict[str, A
         url = self.base_url + '/dna/intent/api/v1/event/webhook'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_webhook(self, webhook_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_webhook(self, webhook_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Webhook Destination
 
         Get Webhook Destination
@@ -2469,7 +2573,8 @@ def get_dna_intent_api_v1_event_webhook(self, webhook_ids: Optional[Any] = None,
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_webhook(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_webhook(self, content__type: Any) -> Dict[str, Any]:
         """Create Webhook Destination
 
         Create Webhook Destination
@@ -2490,7 +2595,8 @@ def post_dna_intent_api_v1_event_webhook(self, content__type: Any) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/event/webhook'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_time_zone_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_time_zone_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set time zone for a site
 
         Set time zone settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the settings is unset.
@@ -2513,7 +2619,8 @@ def put_dna_intent_api_v1_sites_id_time_zone_settings(self, content__type: Any, 
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_time_zone_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_time_zone_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve time zone settings for a site
 
         Retrieve time zone settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the setting is unset at a site.
@@ -2537,7 +2644,8 @@ def get_dna_intent_api_v1_sites_id_time_zone_settings(self, id: Any, inherited: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_network_device_id(self, id: Any, clean_config: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_network_device_id(self, id: Any, clean_config: Optional[Any] = None) -> Dict[str, Any]:
         """Delete Device by Id
 
         This API allows any network device that is not currently provisioned to be removed from the inventory. Important: Devices currently provisioned cannot be deleted. To delete a provisioned device, the device must be first deprovisioned.
@@ -2561,7 +2669,8 @@ def delete_dna_intent_api_v1_network_device_id(self, id: Any, clean_config: Opti
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_id(self, id: Any) -> Dict[str, Any]:
         """Get Device by ID
 
         Returns the network device details for the given device ID
@@ -2581,7 +2690,8 @@ def get_dna_intent_api_v1_network_device_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_app_policy_queuing_profile(self, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_app_policy_queuing_profile(self, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Application Policy Queuing Profile
 
         Get all or by name, existing application policy queuing profiles
@@ -2603,7 +2713,8 @@ def get_dna_intent_api_v1_app_policy_queuing_profile(self, name: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_app_policy_queuing_profile(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_app_policy_queuing_profile(self, content__type: Any) -> Dict[str, Any]:
         """Create Application Policy Queuing Profile
 
         Create new custom application queuing profile
@@ -2624,7 +2735,8 @@ def post_dna_intent_api_v1_app_policy_queuing_profile(self, content__type: Any) 
         url = self.base_url + '/dna/intent/api/v1/app-policy-queuing-profile'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_app_policy_queuing_profile(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_app_policy_queuing_profile(self, content__type: Any) -> Dict[str, Any]:
         """Update Application Policy Queuing Profile
 
         Update existing custom application queuing profile
@@ -2645,7 +2757,8 @@ def put_dna_intent_api_v1_app_policy_queuing_profile(self, content__type: Any) -
         url = self.base_url + '/dna/intent/api/v1/app-policy-queuing-profile'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_syslog_config(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_syslog_config(self, content__type: Any) -> Dict[str, Any]:
         """Create Syslog Destination
 
         Create Syslog Destination
@@ -2666,7 +2779,8 @@ def post_dna_intent_api_v1_event_syslog_config(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/intent/api/v1/event/syslog-config'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_syslog_config(self, config_id: Optional[Any] = None, name: Optional[Any] = None, protocol: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_syslog_config(self, config_id: Optional[Any] = None, name: Optional[Any] = None, protocol: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Syslog Destination
 
         Get Syslog Destination
@@ -2700,7 +2814,8 @@ def get_dna_intent_api_v1_event_syslog_config(self, config_id: Optional[Any] = N
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_syslog_config(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_syslog_config(self, content__type: Any) -> Dict[str, Any]:
         """Update Syslog Destination
 
         Update Syslog Destination
@@ -2721,7 +2836,8 @@ def put_dna_intent_api_v1_event_syslog_config(self, content__type: Any) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/event/syslog-config'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_dot11be_profiles(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_dot11be_profiles(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get all 802.11be Profiles
 
         This API allows the user to get all 802.11be Profile(s) configured under Wireless Settings
@@ -2745,7 +2861,8 @@ def get_dna_intent_api_v1_wireless_settings_dot11be_profiles(self, limit: Option
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_settings_dot11be_profiles(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_settings_dot11be_profiles(self, content__type: Any) -> Dict[str, Any]:
         """Create a 802.11be Profile
 
         This API allows the user to create a 802.11be Profile.Catalyst Center will push this profile to device's "default-dot11be-profile”.Also please note , 802.11be Profile is supported only on IOS-XE controllers since device version 17.15
@@ -2766,7 +2883,8 @@ def post_dna_intent_api_v1_wireless_settings_dot11be_profiles(self, content__typ
         url = self.base_url + '/dna/intent/api/v1/wirelessSettings/dot11beProfiles'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_device_sacct_domain_vacct_name_sync_result(self, domain: Any, name: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_device_sacct_domain_vacct_name_sync_result(self, domain: Any, name: Any) -> Dict[str, Any]:
         """Get Sync Result for Virtual Account
 
         Returns the summary of devices synced from the given smart account & virtual account with PnP (Deprecated)
@@ -2787,7 +2905,8 @@ def get_dna_intent_api_v1_onboarding_pnp_device_sacct_domain_vacct_name_sync_res
         url = url.format(domain=domain, name=name)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_settings_savacct(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_settings_savacct(self, content__type: Any) -> Dict[str, Any]:
         """Add Virtual Account
 
         Registers a Smart Account, Virtual Account and the relevant server profile info with the PnP System & database. The devices present in the registered virtual account are synced with the PnP database as well. The response payload returns the new profile
@@ -2808,7 +2927,8 @@ def post_dna_intent_api_v1_onboarding_pnp_settings_savacct(self, content__type: 
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-settings/savacct'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_onboarding_pnp_settings_savacct(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_onboarding_pnp_settings_savacct(self, content__type: Any) -> Dict[str, Any]:
         """Update PnP Server Profile
 
         Updates the PnP Server profile in a registered Virtual Account in the PnP database. The response payload returns the updated smart & virtual account info
@@ -2829,7 +2949,8 @@ def put_dna_intent_api_v1_onboarding_pnp_settings_savacct(self, content__type: A
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-settings/savacct'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_custom_issue_definitions(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, id: Optional[Any] = None, profile_id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, is_enabled: Optional[Any] = None, severity: Optional[Any] = None, facility: Optional[Any] = None, mnemonic: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_custom_issue_definitions(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, id: Optional[Any] = None, profile_id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, is_enabled: Optional[Any] = None, severity: Optional[Any] = None, facility: Optional[Any] = None, mnemonic: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get all the custom issue definitions based on the given filters.
 
         Retrieve the existing syslog-based custom issue definitions. The supported filters are id, name, profileId,  definition enable status, priority, severity, facility and mnemonic. The issue definition configurations may vary across profiles, hence specifying the profile Id in the query parameter is important and the default profile is global.
@@ -2881,7 +3002,8 @@ def get_dna_intent_api_v1_custom_issue_definitions(self, x__c_a_l_l_e_r__i_d: Op
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_custom_issue_definitions(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_custom_issue_definitions(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Creates a new user-defined issue definitions.
 
         Create a new custom issue definition using the provided input request data. The unique identifier for this issue definition is id. Please note that the issue names cannot be duplicated. The definition is based on the syslog. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceUserDefinedIssueAPIs-1.0.0-resolved.yaml
@@ -2905,7 +3027,8 @@ def post_dna_intent_api_v1_custom_issue_definitions(self, content__type: Any, x_
         url = self.base_url + '/dna/intent/api/v1/customIssueDefinitions'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_template_deploy(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_template_deploy(self, content__type: Any) -> Dict[str, Any]:
         """Deploy Template
 
         API to deploy a template.
@@ -2926,7 +3049,8 @@ def post_dna_intent_api_v1_template_programmer_template_deploy(self, content__ty
         url = self.base_url + '/dna/intent/api/v1/template-programmer/template/deploy'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_authentication_policy_servers_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_authentication_policy_servers_id(self, id: Any) -> Dict[str, Any]:
         """Delete Authentication and Policy Server Access Configuration
 
         API to delete AAA/ISE server access configuration.
@@ -2946,7 +3070,8 @@ def delete_dna_intent_api_v1_authentication_policy_servers_id(self, id: Any) -> 
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_authentication_policy_servers_id(self, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_authentication_policy_servers_id(self, id: Any) -> Dict[str, Any]:
         """Edit Authentication and Policy Server Access Configuration
 
         API to edit AAA/ISE server access configuration. After edit, use ‘Cisco ISE Server Integration Status’ Intent API to check the integration status.
@@ -2966,7 +3091,8 @@ def put_dna_intent_api_v1_authentication_policy_servers_id(self, id: Any) -> Dic
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_multicast_virtual_networks_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_multicast_virtual_networks_id(self, id: Any) -> Dict[str, Any]:
         """Delete multicast virtual network by id
 
         Deletes a multicast configuration for a virtual network based on id.
@@ -2986,7 +3112,8 @@ def delete_dna_intent_api_v1_sda_multicast_virtual_networks_id(self, id: Any) ->
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_app_policy_default(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_app_policy_default(self) -> Dict[str, Any]:
         """Get Application Policy Default
 
         Get default application policy
@@ -3002,7 +3129,8 @@ def get_dna_intent_api_v1_app_policy_default(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/app-policy-default'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_network_device_id_primary_managed_ap_locations(self, network_device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_network_device_id_primary_managed_ap_locations(self, network_device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get Primary Managed AP Locations for specific Wireless Controller
 
         Retrieves all the details of Primary Managed AP locations associated with the specific Wireless Controller.
@@ -3028,7 +3156,8 @@ def get_dna_intent_api_v1_wireless_controllers_network_device_id_primary_managed
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_module_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_module_id(self, id: Any) -> Dict[str, Any]:
         """Get Module Info by Id
 
         Returns Module info by 'module id'
@@ -3048,7 +3177,8 @@ def get_dna_intent_api_v1_network_device_module_id(self, id: Any) -> Dict[str, A
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_health_score_definitions_bulk_update(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_health_score_definitions_bulk_update(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Update health score definitions.
 
         Update health thresholds, include status of overall health status for each metric.
@@ -3076,7 +3206,8 @@ And also to synchronize with global profile issue thresholds of the definition f
         url = self.base_url + '/dna/intent/api/v1/healthScoreDefinitions/bulkUpdate'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, fabric_id: Any, network_device_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, fabric_id: Any, network_device_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices layer 3 handoffs with sda transit
 
         Returns a list of layer 3 handoffs with sda transit of fabric devices that match the provided query parameters.
@@ -3104,7 +3235,8 @@ def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, content__type: Any) -> Dict[str, Any]:
         """Add fabric devices layer 3 handoffs with sda transit
 
         Adds layer 3 handoffs with sda transit in fabric devices based on user input.
@@ -3125,7 +3257,8 @@ def post_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self,
         url = self.base_url + '/dna/intent/api/v1/sda/fabricDevices/layer3Handoffs/sdaTransits'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, fabric_id: Any, network_device_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, fabric_id: Any, network_device_id: Any) -> Dict[str, Any]:
         """Delete fabric device layer 3 handoffs with sda transit
 
         Deletes layer 3 handoffs with sda transit of a fabric device based on user input.
@@ -3149,7 +3282,8 @@ def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(sel
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, content__type: Any) -> Dict[str, Any]:
         """Update fabric devices layer 3 handoffs with sda transit
 
         Updates layer 3 handoffs with sda transit of fabric devices based on user input.
@@ -3170,7 +3304,8 @@ def put_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits(self, 
         url = self.base_url + '/dna/intent/api/v1/sda/fabricDevices/layer3Handoffs/sdaTransits'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, content__type: Any) -> Dict[str, Any]:
         """Add fabric devices layer 3 handoffs with ip transit
 
         Adds layer 3 handoffs with ip transit in fabric devices based on user input.
@@ -3191,7 +3326,8 @@ def post_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, 
         url = self.base_url + '/dna/intent/api/v1/sda/fabricDevices/layer3Handoffs/ipTransits'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, fabric_id: Any, network_device_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, fabric_id: Any, network_device_id: Any) -> Dict[str, Any]:
         """Delete fabric device layer 3 handoffs with ip transit
 
         Deletes layer 3 handoffs with ip transit of a fabric device based on user input.
@@ -3215,7 +3351,8 @@ def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, fabric_id: Any, network_device_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, fabric_id: Any, network_device_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices layer 3 handoffs with ip transit
 
         Returns a list of layer 3 handoffs with ip transit of fabric devices that match the provided query parameters.
@@ -3243,7 +3380,8 @@ def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, f
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, content__type: Any) -> Dict[str, Any]:
         """Update fabric devices layer 3 handoffs with ip transit
 
         Updates layer 3 handoffs with ip transit of fabric devices based on user input.
@@ -3264,7 +3402,8 @@ def put_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits(self, c
         url = self.base_url + '/dna/intent/api/v1/sda/fabricDevices/layer3Handoffs/ipTransits'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_site_wise_product_names(self, site_id: Optional[Any] = None, product_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_site_wise_product_names(self, site_id: Optional[Any] = None, product_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Returns network device product names for a site
 
         Provides network device product names for a site. The default value of `siteId` is global. The response will include the network device count and image summary.
@@ -3292,7 +3431,8 @@ def get_dna_intent_api_v1_site_wise_product_names(self, site_id: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_event_series_count(self, event_ids: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_event_series_count(self, event_ids: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None) -> Dict[str, Any]:
         """Count of Notifications
 
         Get the Count of Published Notifications
@@ -3330,7 +3470,8 @@ def get_dna_intent_api_v1_event_event_series_count(self, event_ids: Optional[Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_images_image_id_site_wise_product_names_product_name_ordinal(self, content__type: Any, image_id: Any, product_name_ordinal: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_images_image_id_site_wise_product_names_product_name_ordinal(self, content__type: Any, image_id: Any, product_name_ordinal: Any) -> Dict[str, Any]:
         """Update the list of sites for the network device product name assigned to the software image
 
         Update the list of sites for the network device product name assigned to the software image. Refer to `/dna/intent/api/v1/images` and `/dna/intent/api/v1/images/{imageId}/siteWiseProductNames` GET APIs for obtaining  `imageId` and `productNameOrdinal` respectively.
@@ -3354,7 +3495,8 @@ def put_dna_intent_api_v1_images_image_id_site_wise_product_names_product_name_o
         url = url.format(image_id=image_id, product_name_ordinal=product_name_ordinal)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_images_image_id_site_wise_product_names_product_name_ordinal(self, image_id: Any, product_name_ordinal: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_images_image_id_site_wise_product_names_product_name_ordinal(self, image_id: Any, product_name_ordinal: Any) -> Dict[str, Any]:
         """Unassign network device product name from the given software image
 
         This API unassigns the network device product name from all the sites for the given software image.
@@ -3376,7 +3518,8 @@ def delete_dna_intent_api_v1_images_image_id_site_wise_product_names_product_nam
         url = url.format(image_id=image_id, product_name_ordinal=product_name_ordinal)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_credential_to_site_site_id(self, site_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_credential_to_site_site_id(self, site_id: Any) -> Dict[str, Any]:
         """Assign Device Credential To Site V2
 
         API to assign Device Credential to a site.
@@ -3396,7 +3539,8 @@ def post_dna_intent_api_v2_credential_to_site_site_id(self, site_id: Any) -> Dic
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_data_reports_report_id(self, report_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_data_reports_report_id(self, report_id: Any) -> Dict[str, Any]:
         """Delete a scheduled report
 
         Delete a scheduled report configuration. Deletes the report executions also.
@@ -3416,7 +3560,8 @@ def delete_dna_intent_api_v1_data_reports_report_id(self, report_id: Any) -> Dic
         url = url.format(report_id=report_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_data_reports_report_id(self, report_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_data_reports_report_id(self, report_id: Any) -> Dict[str, Any]:
         """Get a scheduled report
 
         Get scheduled report configuration by reportId
@@ -3436,7 +3581,8 @@ def get_dna_intent_api_v1_data_reports_report_id(self, report_id: Any) -> Dict[s
         url = url.format(report_id=report_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_site_health(self, site_type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, timestamp: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_site_health(self, site_type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, timestamp: Optional[Any] = None) -> Dict[str, Any]:
         """Get Site Health
 
         Returns Overall Health information for all sites
@@ -3464,7 +3610,8 @@ def get_dna_intent_api_v1_site_health(self, site_type: Optional[Any] = None, off
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_uuid_interface_poe_detail(self, device_uuid: Any, interface_name_list: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_uuid_interface_poe_detail(self, device_uuid: Any, interface_name_list: Optional[Any] = None) -> Dict[str, Any]:
         """Returns POE interface details for the device.
 
         Returns POE interface details for the device, where deviceuuid is mandatory & accepts comma seperated interface names which is optional and returns information for that particular interfaces where(operStatus = operationalStatus)
@@ -3488,7 +3635,8 @@ def get_dna_intent_api_v1_network_device_device_uuid_interface_poe_detail(self, 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_count(self, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_count(self, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get sites count
 
         Get sites count.
@@ -3510,7 +3658,8 @@ def get_dna_intent_api_v1_sites_count(self, name: Optional[Any] = None) -> Dict[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostic_validation_workflows(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, run_status: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostic_validation_workflows(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, run_status: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the list of validation workflows
 
         Retrieves the workflows that have been successfully submitted and are currently available. This is sorted by `submitTime`
@@ -3540,7 +3689,8 @@ def get_dna_intent_api_v1_diagnostic_validation_workflows(self, start_time: Opti
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_diagnostic_validation_workflows(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_diagnostic_validation_workflows(self, content__type: Any) -> Dict[str, Any]:
         """Submits the workflow for executing validations
 
         Submits the workflow for executing the validations for the given validation specifications
@@ -3562,7 +3712,8 @@ def post_dna_intent_api_v1_diagnostic_validation_workflows(self, content__type: 
         url = self.base_url + '/dna/intent/api/v1/diagnosticValidationWorkflows'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_interface_interface_uuid_operation(self, interface_uuid: Any, content__type: Optional[Any] = None, deployment_mode: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_interface_interface_uuid_operation(self, interface_uuid: Any, content__type: Optional[Any] = None, deployment_mode: Optional[Any] = None) -> Dict[str, Any]:
         """Clear Mac-Address table
 
         Clear mac-address on an individual port. In request body, operation needs to be specified as 'ClearMacAddress'. In the future more possible operations will be added to this API
@@ -3589,7 +3740,8 @@ def post_dna_intent_api_v1_interface_interface_uuid_operation(self, interface_uu
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_data_api_v1_network_devices_query_count(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_data_api_v1_network_devices_query_count(self, content__type: Any) -> Dict[str, Any]:
         """Gets the total number Network Devices based on the provided complex filters and aggregation functions.
 
         Gets the total number Network Devices based on the provided complex filters and aggregation functions. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -3611,7 +3763,8 @@ def post_data_api_v1_network_devices_query_count(self, content__type: Any) -> Di
         url = self.base_url + '/data/api/v1/networkDevices/query/count'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_lan_automation_update_device(self, content__type: Any, feature: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_lan_automation_update_device(self, content__type: Any, feature: Any) -> Dict[str, Any]:
         """LAN Automation Device Update
 
          Invoke this API to perform a DAY-N update on LAN Automation-related devices. Supported features include Loopback0 IP update, hostname update, link addition, and link deletion. 
@@ -3636,7 +3789,8 @@ def put_dna_intent_api_v1_lan_automation_update_device(self, content__type: Any,
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_snmpv2_write_community(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_snmpv2_write_community(self, content__type: Any) -> Dict[str, Any]:
         """Update SNMP write community
 
         Updates global SNMP write community
@@ -3657,7 +3811,8 @@ def put_dna_intent_api_v1_global_credential_snmpv2_write_community(self, content
         url = self.base_url + '/dna/intent/api/v1/global-credential/snmpv2-write-community'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_credential_snmpv2_write_community(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_credential_snmpv2_write_community(self, content__type: Any) -> Dict[str, Any]:
         """Create SNMP write community
 
         Adds global SNMP write community
@@ -3678,7 +3833,8 @@ def post_dna_intent_api_v1_global_credential_snmpv2_write_community(self, conten
         url = self.base_url + '/dna/intent/api/v1/global-credential/snmpv2-write-community'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_site_health_summaries_summary_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_site_health_summaries_summary_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None) -> Dict[str, Any]:
         """Query an aggregated summary of site health data.
 
         Query an aggregated summary of all site health
@@ -3755,7 +3911,8 @@ id=6bef213c-19ca-4170-8375-b694e251101c&id=32219612-819e-4b5e-a96b-cf22aca13dd9&
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_site_health_summaries_summary_analytics(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_site_health_summaries_summary_analytics(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Read an aggregated summary of site health data.
 
         Get an aggregated summary of all site health or use the query params to get an aggregated summary of health for a subset of sites.
@@ -3873,7 +4030,8 @@ attribute=siteHierarchy&attribute=clientCount (multiple attributes requested)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_site_id_profile_assignments_count(self, site_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_site_id_profile_assignments_count(self, site_id: Any) -> Dict[str, Any]:
         """Retrieves the count of profiles that the given site has been assigned
 
         Retrieves the count of profiles that the given site has been assigned.  These profiles may either be directly assigned to this site, or were assigned to a parent site and have been inherited.
@@ -3894,7 +4052,8 @@ def get_dna_intent_api_v1_sites_site_id_profile_assignments_count(self, site_id:
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_site_count(self, id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_site_count(self, id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Site Count V2
 
         Get the site count of the specified site's sub-hierarchy (inclusive of the provided site)
@@ -3916,7 +4075,8 @@ def get_dna_intent_api_v2_site_count(self, id: Optional[Any] = None) -> Dict[str
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images_count(self, site_id: Optional[Any] = None, product_name_ordinal: Optional[Any] = None, supervisor_product_name_ordinal: Optional[Any] = None, imported: Optional[Any] = None, name: Optional[Any] = None, version: Optional[Any] = None, golden: Optional[Any] = None, integrity: Optional[Any] = None, has_addon_images: Optional[Any] = None, is_addon_images: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images_count(self, site_id: Optional[Any] = None, product_name_ordinal: Optional[Any] = None, supervisor_product_name_ordinal: Optional[Any] = None, imported: Optional[Any] = None, name: Optional[Any] = None, version: Optional[Any] = None, golden: Optional[Any] = None, integrity: Optional[Any] = None, has_addon_images: Optional[Any] = None, is_addon_images: Optional[Any] = None) -> Dict[str, Any]:
         """Returns count of software images
 
         Returns the count of software images for given `siteId`. The default value of siteId is global
@@ -3956,7 +4116,8 @@ def get_dna_intent_api_v1_images_count(self, site_id: Optional[Any] = None, prod
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_extranet_policies(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_extranet_policies(self, content__type: Any) -> Dict[str, Any]:
         """Add extranet policy
 
         Adds an extranet policy based on user input.
@@ -3978,7 +4139,8 @@ def post_dna_intent_api_v1_sda_extranet_policies(self, content__type: Any) -> Di
         url = self.base_url + '/dna/intent/api/v1/sda/extranetPolicies'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_extranet_policies(self, extranet_policy_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_extranet_policies(self, extranet_policy_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get extranet policies
 
         Returns a list of extranet policies that match the provided query parameters.
@@ -4004,7 +4166,8 @@ def get_dna_intent_api_v1_sda_extranet_policies(self, extranet_policy_name: Opti
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_extranet_policies(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_extranet_policies(self, content__type: Any) -> Dict[str, Any]:
         """Update extranet policy
 
         Updates an extranet policy based on user input.
@@ -4025,7 +4188,8 @@ def put_dna_intent_api_v1_sda_extranet_policies(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/intent/api/v1/sda/extranetPolicies'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_extranet_policies(self, extranet_policy_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_extranet_policies(self, extranet_policy_name: Optional[Any] = None) -> Dict[str, Any]:
         """Delete extranet policies
 
         Deletes extranet policies based on user input.
@@ -4047,7 +4211,8 @@ def delete_dna_intent_api_v1_sda_extranet_policies(self, extranet_policy_name: O
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_certificate(self, content__type: Any, pk_password: Optional[Any] = None, list_of_users: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_certificate(self, content__type: Any, pk_password: Optional[Any] = None, list_of_users: Optional[Any] = None) -> Dict[str, Any]:
         """importCertificate
 
         This API enables a user to import a PEM certificate and its key for the controller and/or disaster recovery.
@@ -4074,7 +4239,8 @@ def post_dna_intent_api_v1_certificate(self, content__type: Any, pk_password: Op
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_wireless_profiles_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_wireless_profiles_id(self, id: Any) -> Dict[str, Any]:
         """Delete Wireless Profile
 
         This API allows the user to delete Wireless Network Profile by ID
@@ -4094,7 +4260,8 @@ def delete_dna_intent_api_v1_wireless_profiles_id(self, id: Any) -> Dict[str, An
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_wireless_profiles_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_wireless_profiles_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update Wireless Profile
 
         This API allows the user to update a Wireless Network Profile by ID
@@ -4117,7 +4284,8 @@ def put_dna_intent_api_v1_wireless_profiles_id(self, content__type: Any, id: Any
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_profiles_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_profiles_id(self, id: Any) -> Dict[str, Any]:
         """Get Wireless Profile by ID
 
         This API allows the user to get a Wireless Network Profile by ID
@@ -4137,7 +4305,8 @@ def get_dna_intent_api_v1_wireless_profiles_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_telemetry_settings_apply(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_telemetry_settings_apply(self, content__type: Any) -> Dict[str, Any]:
         """Update a device(s) telemetry settings to conform to the telemetry settings for its site
 
         Update a device(s) telemetry settings to conform to the telemetry settings for its site.  One Task is created to track the update, for more granular status tracking, split your devices into multiple requests.
@@ -4158,7 +4327,8 @@ def post_dna_intent_api_v1_telemetry_settings_apply(self, content__type: Any) ->
         url = self.base_url + '/dna/intent/api/v1/telemetrySettings/apply'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_flexible_report_schedule_report_id(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_flexible_report_schedule_report_id(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
         """Get flexible report schedule by report id
 
         Get flexible report schedule by report id
@@ -4181,7 +4351,8 @@ def get_dna_data_api_v1_flexible_report_schedule_report_id(self, content__type: 
         url = url.format(report_id=report_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_data_api_v1_flexible_report_schedule_report_id(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
+
+    def put_dna_data_api_v1_flexible_report_schedule_report_id(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
         """Update schedule of flexible report
 
         Update schedule of flexible report
@@ -4204,7 +4375,8 @@ def put_dna_data_api_v1_flexible_report_schedule_report_id(self, content__type: 
         url = url.format(report_id=report_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_api_v1_onboarding_pnp_device_authorize(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_api_v1_onboarding_pnp_device_authorize(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
         """Authorize Device
 
         Authorizes one of more devices. A device can only be authorized if Authorization is set in Device Settings.
@@ -4225,7 +4397,8 @@ def post_api_v1_onboarding_pnp_device_authorize(self, content__type: Optional[An
         url = self.base_url + '/api/v1/onboarding/pnp-device/authorize'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_port_channels(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_port_channels(self, content__type: Any) -> Dict[str, Any]:
         """Add port channels
 
         Adds port channels based on user input.
@@ -4246,7 +4419,8 @@ def post_dna_intent_api_v1_sda_port_channels(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/sda/portChannels'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_port_channels(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, port_channel_name: Optional[Any] = None, connected_device_type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_port_channels(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, port_channel_name: Optional[Any] = None, connected_device_type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get port channels
 
         Returns a list of port channels that match the provided query parameters.
@@ -4278,7 +4452,8 @@ def get_dna_intent_api_v1_sda_port_channels(self, fabric_id: Optional[Any] = Non
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_port_channels(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_port_channels(self, content__type: Any) -> Dict[str, Any]:
         """Update port channels
 
         Updates port channels based on user input.
@@ -4299,7 +4474,8 @@ def put_dna_intent_api_v1_sda_port_channels(self, content__type: Any) -> Dict[st
         url = self.base_url + '/dna/intent/api/v1/sda/portChannels'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_port_channels(self, fabric_id: Any, network_device_id: Any, port_channel_name: Optional[Any] = None, connected_device_type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_port_channels(self, fabric_id: Any, network_device_id: Any, port_channel_name: Optional[Any] = None, connected_device_type: Optional[Any] = None) -> Dict[str, Any]:
         """Delete port channels
 
         Deletes port channels based on user input.
@@ -4327,7 +4503,8 @@ def delete_dna_intent_api_v1_sda_port_channels(self, fabric_id: Any, network_dev
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_file_name_space(self, name_space: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_file_name_space(self, name_space: Any) -> Dict[str, Any]:
         """uploadFile
 
         Uploads a new file within a specific nameSpace
@@ -4347,7 +4524,8 @@ def post_dna_intent_api_v1_file_name_space(self, name_space: Any) -> Dict[str, A
         url = url.format(name_space=name_space)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_network_devices_summary_analytics(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_network_devices_summary_analytics(self, content__type: Any) -> Dict[str, Any]:
         """Gets the summary analytics data related to network devices.
 
         Gets the summary analytics data related to network devices based on the provided input data. This endpoint helps to obtain the consolidated insights into the performance and status of the monitored network devices. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -4368,7 +4546,8 @@ def post_dna_data_api_v1_network_devices_summary_analytics(self, content__type: 
         url = self.base_url + '/dna/data/api/v1/networkDevices/summaryAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, id: Any) -> Dict[str, Any]:
         """Delete RF Profile
 
         This API allows the user to delete a custom RF Profile
@@ -4388,7 +4567,8 @@ def delete_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, id: Any) -> 
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, id: Any) -> Dict[str, Any]:
         """Get RF Profile by ID
 
         This API allows the user to get a RF Profile by RF Profile ID
@@ -4410,7 +4590,8 @@ def get_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, id: Any) -> Dic
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update RF Profile
 
         This API allows the user to update a custom RF Profile
@@ -4433,7 +4614,8 @@ def put_dna_intent_api_v1_wireless_settings_rf_profiles_id(self, content__type: 
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_credential_netconf(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_credential_netconf(self, content__type: Any) -> Dict[str, Any]:
         """Create Netconf credentials
 
         Adds global netconf credentials
@@ -4454,7 +4636,8 @@ def post_dna_intent_api_v1_global_credential_netconf(self, content__type: Any) -
         url = self.base_url + '/dna/intent/api/v1/global-credential/netconf'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_netconf(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_netconf(self, content__type: Any) -> Dict[str, Any]:
         """Update Netconf credentials
 
         Updates global netconf credentials
@@ -4475,7 +4658,8 @@ def put_dna_intent_api_v1_global_credential_netconf(self, content__type: Any) ->
         url = self.base_url + '/dna/intent/api/v1/global-credential/netconf'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_template_programmer_template(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_template_programmer_template(self, content__type: Any) -> Dict[str, Any]:
         """Update Template
 
         API to update a template.
@@ -4496,7 +4680,8 @@ def put_dna_intent_api_v1_template_programmer_template(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/template-programmer/template'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_template_programmer_template(self, project_id: Optional[Any] = None, software_type: Optional[Any] = None, software_version: Optional[Any] = None, product_family: Optional[Any] = None, product_series: Optional[Any] = None, product_type: Optional[Any] = None, filter_conflicting_templates: Optional[Any] = None, tags: Optional[Any] = None, project_names: Optional[Any] = None, un_committed: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_template_programmer_template(self, project_id: Optional[Any] = None, software_type: Optional[Any] = None, software_version: Optional[Any] = None, product_family: Optional[Any] = None, product_series: Optional[Any] = None, product_type: Optional[Any] = None, filter_conflicting_templates: Optional[Any] = None, tags: Optional[Any] = None, project_names: Optional[Any] = None, un_committed: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
         """Gets the templates available
 
         List the templates available
@@ -4538,7 +4723,8 @@ def get_dna_intent_api_v1_template_programmer_template(self, project_id: Optiona
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription_details_syslog(self, name: Optional[Any] = None, instance_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription_details_syslog(self, name: Optional[Any] = None, instance_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Syslog Subscription Details
 
         Gets the list of subscription details for specified connectorType
@@ -4570,7 +4756,8 @@ def get_dna_intent_api_v1_event_subscription_details_syslog(self, name: Optional
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_system_issue_definitions(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, profile_id: Optional[Any] = None, id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, issue_enabled: Optional[Any] = None, attribute: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_system_issue_definitions(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, profile_id: Optional[Any] = None, id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, issue_enabled: Optional[Any] = None, attribute: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Returns all issue trigger definitions for given filters.
 
         Get all system issue defintions. The supported filters are id, name, profileId and definition enable status. An issue trigger definition can be different across the profile and device type. So, `profileId` and `deviceType` in the query param is important and default is global profile and all device type. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-issueAndHealthDefinitions-1.0.0-resolved.yaml
@@ -4641,7 +4828,8 @@ name=BGP_Down&name=BGP_Flap (multiple issue names separated by & operator)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_data_reports(self, view_group_id: Optional[Any] = None, view_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_data_reports(self, view_group_id: Optional[Any] = None, view_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get list of scheduled reports
 
         Get list of scheduled report configurations.
@@ -4665,7 +4853,8 @@ def get_dna_intent_api_v1_data_reports(self, view_group_id: Optional[Any] = None
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_data_reports(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_data_reports(self, content__type: Any) -> Dict[str, Any]:
         """Create or Schedule a report
 
         Create/Schedule a report configuration. Use "Get view details for a given view group & view" API to get the metadata required to configure a report.
@@ -4686,7 +4875,8 @@ def post_dna_intent_api_v1_data_reports(self, content__type: Any) -> Dict[str, A
         url = self.base_url + '/dna/intent/api/v1/data/reports'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_users_external_servers_aaa_attribute(self) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_users_external_servers_aaa_attribute(self) -> Dict[str, Any]:
         """Get AAA Attribute API
 
         Get the current value of the custom AAA attribute.
@@ -4702,7 +4892,8 @@ def get_dna_system_api_v1_users_external_servers_aaa_attribute(self) -> Dict[str
         url = self.base_url + '/dna/system/api/v1/users/external-servers/aaa-attribute'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_system_api_v1_users_external_servers_aaa_attribute(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_system_api_v1_users_external_servers_aaa_attribute(self, content__type: Any) -> Dict[str, Any]:
         """Add and Update AAA Attribute API
 
         Add or update the custom AAA attribute for external authentication. Note that if you decide not to set the custom AAA attribute, a default AAA attribute will be used for authentication based on the protocol supported by your server. For TACACS servers it will be "cisco-av-pair" and for RADIUS servers it will be "Cisco-AVPair".
@@ -4723,7 +4914,8 @@ def post_dna_system_api_v1_users_external_servers_aaa_attribute(self, content__t
         url = self.base_url + '/dna/system/api/v1/users/external-servers/aaa-attribute'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_system_api_v1_users_external_servers_aaa_attribute(self) -> Dict[str, Any]:
+
+    def delete_dna_system_api_v1_users_external_servers_aaa_attribute(self) -> Dict[str, Any]:
         """Delete AAA Attribute API
 
         Delete the custom AAA attribute that was added. Note that by deleting the AAA attribute, a default AAA attribute will be used for authentication based on the protocol supported by your server. For TACACS servers it will be "cisco-av-pair" and for RADIUS servers it will be "Cisco-AVPair".
@@ -4739,7 +4931,8 @@ def delete_dna_system_api_v1_users_external_servers_aaa_attribute(self) -> Dict[
         url = self.base_url + '/dna/system/api/v1/users/external-servers/aaa-attribute'
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_client_detail(self, mac_address: Any, timestamp: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_client_detail(self, mac_address: Any, timestamp: Optional[Any] = None) -> Dict[str, Any]:
         """Get Client Detail
 
         Returns detailed Client information retrieved by Mac Address for any given point of time. 
@@ -4763,7 +4956,8 @@ def get_dna_intent_api_v1_client_detail(self, mac_address: Any, timestamp: Optio
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_assurance_events_count(self, device_family: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, message_type: Optional[Any] = None, severity: Optional[Any] = None, site_id: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, network_device_name: Optional[Any] = None, network_device_id: Optional[Any] = None, ap_mac: Optional[Any] = None, client_mac: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_assurance_events_count(self, device_family: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, message_type: Optional[Any] = None, severity: Optional[Any] = None, site_id: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, network_device_name: Optional[Any] = None, network_device_id: Optional[Any] = None, ap_mac: Optional[Any] = None, client_mac: Optional[Any] = None) -> Dict[str, Any]:
         """Count the number of events
 
         API to fetch the count of assurance events that match the filter criteria. Please refer to the 'API Support Documentation' section to understand which fields are supported. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceEvents-1.0.0-resolved.yaml
@@ -4893,7 +5087,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_snmpv3(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_snmpv3(self, content__type: Any) -> Dict[str, Any]:
         """Update SNMPv3 credentials
 
         Updates global SNMPv3 credential
@@ -4914,7 +5109,8 @@ def put_dna_intent_api_v1_global_credential_snmpv3(self, content__type: Any) -> 
         url = self.base_url + '/dna/intent/api/v1/global-credential/snmpv3'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_credential_snmpv3(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_credential_snmpv3(self, content__type: Any) -> Dict[str, Any]:
         """Create SNMPv3 credentials
 
         Adds global SNMPv3 credentials
@@ -4935,7 +5131,8 @@ def post_dna_intent_api_v1_global_credential_snmpv3(self, content__type: Any) ->
         url = self.base_url + '/dna/intent/api/v1/global-credential/snmpv3'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_eox_status_device(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_eox_status_device(self) -> Dict[str, Any]:
         """Get EoX Status For All Devices
 
         Retrieves EoX status for all devices in the network
@@ -4951,7 +5148,8 @@ def get_dna_intent_api_v1_eox_status_device(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/eox-status/device'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tag_id_member_count(self, id: Any, member_type: Any, member_association_type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tag_id_member_count(self, id: Any, member_type: Any, member_association_type: Optional[Any] = None) -> Dict[str, Any]:
         """Get Tag Member count
 
         Returns the number of members in a given tag
@@ -4977,7 +5175,8 @@ def get_dna_intent_api_v1_tag_id_member_count(self, id: Any, member_type: Any, m
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_ipam_server_setting(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_ipam_server_setting(self, content__type: Any) -> Dict[str, Any]:
         """Creates configuration details of the external IPAM server.
 
         Creates configuration details of the external IPAM server. You should only create one external IPAM server; delete any existing external server before creating a new one.
@@ -4998,7 +5197,8 @@ def post_dna_intent_api_v1_ipam_server_setting(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/intent/api/v1/ipam/serverSetting'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_ipam_server_setting(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_ipam_server_setting(self) -> Dict[str, Any]:
         """Retrieves configuration details of the external IPAM server.
 
         Retrieves configuration details of the external IPAM server.  If an external IPAM server has not been created, this resource will return a `404` response.
@@ -5014,7 +5214,8 @@ def get_dna_intent_api_v1_ipam_server_setting(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/ipam/serverSetting'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_ipam_server_setting(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_ipam_server_setting(self, content__type: Any) -> Dict[str, Any]:
         """Updates configuration details of the external IPAM server.
 
         Updates configuration details of the external IPAM server.
@@ -5035,7 +5236,8 @@ def put_dna_intent_api_v1_ipam_server_setting(self, content__type: Any) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/ipam/serverSetting'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_ipam_server_setting(self) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_ipam_server_setting(self) -> Dict[str, Any]:
         """Deletes configuration details of the external IPAM server.
 
         Deletes configuration details of the external IPAM server.
@@ -5051,7 +5253,8 @@ def delete_dna_intent_api_v1_ipam_server_setting(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/ipam/serverSetting'
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_data_view_groups_view_group_id_views_view_id(self, view_group_id: Any, view_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_data_view_groups_view_group_id_views_view_id(self, view_group_id: Any, view_id: Any) -> Dict[str, Any]:
         """Get view details for a given view group & view
 
         Gives complete information of the view that is required to configure a report. Use "Get views for a given view group" API to get the viewIds  (required as a query param for this API) for available views.
@@ -5072,7 +5275,8 @@ def get_dna_intent_api_v1_data_view_groups_view_group_id_views_view_id(self, vie
         url = url.format(view_group_id=view_group_id, view_id=view_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_uuid_equipment(self, device_uuid: Any, type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_uuid_equipment(self, device_uuid: Any, type: Optional[Any] = None) -> Dict[str, Any]:
         """Get the Details of Physical Components of the Given Device.
 
         Return all types of equipment details like PowerSupply, Fan, Chassis, Backplane, Module, PROCESSOR, Other and SFP for the Given device.
@@ -5096,7 +5300,8 @@ def get_dna_intent_api_v1_network_device_device_uuid_equipment(self, device_uuid
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_network_device_device_id_start_index_records_to_return(self, device_id: Any, start_index: Any, records_to_return: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_network_device_device_id_start_index_records_to_return(self, device_id: Any, start_index: Any, records_to_return: Any) -> Dict[str, Any]:
         """Get Device Interfaces by specified range
 
         Returns the list of interfaces for the device for the specified range
@@ -5118,7 +5323,8 @@ def get_dna_intent_api_v1_interface_network_device_device_id_start_index_records
         url = url.format(device_id=device_id, start_index=start_index, records_to_return=records_to_return)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_networkprofile_network_profile_id_site_site_id(self, content__type: Any, network_profile_id: Any, site_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_networkprofile_network_profile_id_site_site_id(self, content__type: Any, network_profile_id: Any, site_id: Any) -> Dict[str, Any]:
         """Associate
 
         Associate Site to a Network Profile
@@ -5142,7 +5348,8 @@ def post_dna_intent_api_v1_networkprofile_network_profile_id_site_site_id(self, 
         url = url.format(network_profile_id=network_profile_id, site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_networkprofile_network_profile_id_site_site_id(self, content__type: Any, network_profile_id: Any, site_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_networkprofile_network_profile_id_site_site_id(self, content__type: Any, network_profile_id: Any, site_id: Any) -> Dict[str, Any]:
         """Disassociate
 
         Disassociate a Site from a Network Profile
@@ -5166,7 +5373,8 @@ def delete_dna_intent_api_v1_networkprofile_network_profile_id_site_site_id(self
         url = url.format(network_profile_id=network_profile_id, site_id=site_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_collection_schedule_global(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_collection_schedule_global(self) -> Dict[str, Any]:
         """Get Polling Interval for all devices
 
         Returns polling interval of all devices
@@ -5182,7 +5390,8 @@ def get_dna_intent_api_v1_network_device_collection_schedule_global(self) -> Dic
         url = self.base_url + '/dna/intent/api/v1/network-device/collection-schedule/global'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_assurance_issues_top_n_analytics(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_assurance_issues_top_n_analytics(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get Top N analytics data of issues
 
         Gets the Top N analytics data related to issues based on given filters and group by field. This data can be used to find top sites which has most issues or top device types with most issue etc,. https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -5209,7 +5418,8 @@ def post_dna_data_api_v1_assurance_issues_top_n_analytics(self, content__type: A
         url = self.base_url + '/dna/data/api/v1/assuranceIssues/topNAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device(self, hostname: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, location_name: Optional[Any] = None, serial_number: Optional[Any] = None, location: Optional[Any] = None, family: Optional[Any] = None, type: Optional[Any] = None, series: Optional[Any] = None, collection_status: Optional[Any] = None, collection_interval: Optional[Any] = None, not_synced_for_minutes: Optional[Any] = None, error_code: Optional[Any] = None, error_description: Optional[Any] = None, software_version: Optional[Any] = None, software_type: Optional[Any] = None, platform_id: Optional[Any] = None, role: Optional[Any] = None, reachability_status: Optional[Any] = None, up_time: Optional[Any] = None, associated_wlc_ip: Optional[Any] = None, license_name: Optional[Any] = None, license_type: Optional[Any] = None, license_status: Optional[Any] = None, module_name: Optional[Any] = None, module_equpimenttype: Optional[Any] = None, module_servicestate: Optional[Any] = None, module_vendorequipmenttype: Optional[Any] = None, module_partnumber: Optional[Any] = None, module_operationstatecode: Optional[Any] = None, id: Optional[Any] = None, device_support_level: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device(self, hostname: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, location_name: Optional[Any] = None, serial_number: Optional[Any] = None, location: Optional[Any] = None, family: Optional[Any] = None, type: Optional[Any] = None, series: Optional[Any] = None, collection_status: Optional[Any] = None, collection_interval: Optional[Any] = None, not_synced_for_minutes: Optional[Any] = None, error_code: Optional[Any] = None, error_description: Optional[Any] = None, software_version: Optional[Any] = None, software_type: Optional[Any] = None, platform_id: Optional[Any] = None, role: Optional[Any] = None, reachability_status: Optional[Any] = None, up_time: Optional[Any] = None, associated_wlc_ip: Optional[Any] = None, license_name: Optional[Any] = None, license_type: Optional[Any] = None, license_status: Optional[Any] = None, module_name: Optional[Any] = None, module_equpimenttype: Optional[Any] = None, module_servicestate: Optional[Any] = None, module_vendorequipmenttype: Optional[Any] = None, module_partnumber: Optional[Any] = None, module_operationstatecode: Optional[Any] = None, id: Optional[Any] = None, device_support_level: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device list
 
         Returns list of network devices based on filter criteria such as management IP address, mac address, hostname, etc. You can use the .* in any value to conduct a wildcard search.
@@ -5301,7 +5511,8 @@ If id parameter is provided with comma separated ids, it will return the list of
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_device(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_device(self, content__type: Any) -> Dict[str, Any]:
         """Add Device
 
         Adds the device with given credential
@@ -5322,7 +5533,8 @@ def post_dna_intent_api_v1_network_device(self, content__type: Any) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/network-device'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_device(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_device(self, content__type: Any) -> Dict[str, Any]:
         """Update Device Details
 
         Update the credentials, management IP address of a given device (or a set of devices) in Catalyst Center and trigger an inventory sync.
@@ -5343,7 +5555,8 @@ def put_dna_intent_api_v1_network_device(self, content__type: Any) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/network-device'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_certificate_p12(self, content__type: Any, p12_password: Any, pk_password: Optional[Any] = None, list_of_users: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_certificate_p12(self, content__type: Any, p12_password: Any, pk_password: Optional[Any] = None, list_of_users: Optional[Any] = None) -> Dict[str, Any]:
         """importCertificateP12
 
         This API enables a user to import a PKCS12 certificate bundle for the controller and/or disaster recovery.
@@ -5372,7 +5585,8 @@ def post_dna_intent_api_v1_certificate_p12(self, content__type: Any, p12_passwor
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_poller_cli_legit_reads(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_poller_cli_legit_reads(self) -> Dict[str, Any]:
         """Get all keywords of CLIs accepted by command runner
 
         Get valid keywords
@@ -5388,7 +5602,8 @@ def get_dna_intent_api_v1_network_device_poller_cli_legit_reads(self) -> Dict[st
         url = self.base_url + '/dna/intent/api/v1/network-device-poller/cli/legit-reads'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_device_sync(self, content__type: Any, force_sync: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_device_sync(self, content__type: Any, force_sync: Optional[Any] = None) -> Dict[str, Any]:
         """Sync Devices
 
         Synchronizes the devices. If forceSync param is false (default) then the sync would run in normal priority thread. If forceSync param is true then the sync would run in high priority thread if available, else the sync will fail. Result can be seen in the child task of each device
@@ -5413,7 +5628,8 @@ def put_dna_intent_api_v1_network_device_sync(self, content__type: Any, force_sy
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_onboarding_pnp_settings_vacct(self, domain: Any, name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_onboarding_pnp_settings_vacct(self, domain: Any, name: Any) -> Dict[str, Any]:
         """Deregister Virtual Account
 
         Deregisters the specified smart account & virtual account info and the associated device information from the PnP System & database. The devices associated with the deregistered virtual account are removed from the PnP database as well. The response payload contains the deregistered smart & virtual account information
@@ -5437,7 +5653,8 @@ def delete_dna_intent_api_v1_onboarding_pnp_settings_vacct(self, domain: Any, na
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_qos_device_interface_info(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_qos_device_interface_info(self, content__type: Any) -> Dict[str, Any]:
         """Create Qos Device Interface Info
 
         Create qos device interface infos associate with network device id to allow the user to mark specific interfaces as WAN, to associate WAN interfaces with specific SP Profile and to be able to define a shaper on WAN interfaces
@@ -5458,7 +5675,8 @@ def post_dna_intent_api_v1_qos_device_interface_info(self, content__type: Any) -
         url = self.base_url + '/dna/intent/api/v1/qos-device-interface-info'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_qos_device_interface_info(self, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_qos_device_interface_info(self, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Qos Device Interface Info
 
         Get all or by network device id, existing qos device interface infos
@@ -5480,7 +5698,8 @@ def get_dna_intent_api_v1_qos_device_interface_info(self, network_device_id: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_qos_device_interface_info(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_qos_device_interface_info(self, content__type: Any) -> Dict[str, Any]:
         """Update Qos Device Interface Info
 
         Update existing qos device interface infos associate with network device id
@@ -5501,7 +5720,8 @@ def put_dna_intent_api_v1_qos_device_interface_info(self, content__type: Any) ->
         url = self.base_url + '/dna/intent/api/v1/qos-device-interface-info'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tags_interfaces_members_associations_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tags_interfaces_members_associations_count(self) -> Dict[str, Any]:
         """Retrieve the count of interfaces that are associated with at least one tag.
 
         Fetches the count of interfaces that are associated with at least one tag. A tag is a user-defined or system-defined construct to group resources. When an interface is tagged, it is called a member of the tag.
@@ -5517,7 +5737,8 @@ def get_dna_intent_api_v1_tags_interfaces_members_associations_count(self) -> Di
         url = self.base_url + '/dna/intent/api/v1/tags/interfaces/membersAssociations/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_image_importation_device_family_identifiers(self, accept: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_image_importation_device_family_identifiers(self, accept: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Family Identifiers
 
         API to get Device Family Identifiers for all Device Families that can be used for tagging an image golden.
@@ -5538,7 +5759,8 @@ def get_dna_intent_api_v1_image_importation_device_family_identifiers(self, acce
         url = self.base_url + '/dna/intent/api/v1/image/importation/device-family-identifiers'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device_import(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device_import(self, content__type: Any) -> Dict[str, Any]:
         """Import Devices in bulk
 
         Add devices to PnP in bulk
@@ -5559,7 +5781,8 @@ def post_dna_intent_api_v1_onboarding_pnp_device_import(self, content__type: Any
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device/import'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_task_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, data: Optional[Any] = None, error_code: Optional[Any] = None, service_type: Optional[Any] = None, username: Optional[Any] = None, progress: Optional[Any] = None, is_error: Optional[Any] = None, failure_reason: Optional[Any] = None, parent_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_task_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, data: Optional[Any] = None, error_code: Optional[Any] = None, service_type: Optional[Any] = None, username: Optional[Any] = None, progress: Optional[Any] = None, is_error: Optional[Any] = None, failure_reason: Optional[Any] = None, parent_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get task count
 
         Returns Task count
@@ -5599,7 +5822,8 @@ def get_dna_intent_api_v1_task_count(self, start_time: Optional[Any] = None, end
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_device_health(self, device_role: Optional[Any] = None, site_id: Optional[Any] = None, health: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_device_health(self, device_role: Optional[Any] = None, site_id: Optional[Any] = None, health: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Devices
 
         Intent API for accessing DNA Assurance Device object for generating reports, creating dashboards or creating additional value added services.
@@ -5633,7 +5857,8 @@ def get_dna_intent_api_v1_device_health(self, device_role: Optional[Any] = None,
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_network_device_id_ssid_details_count(self, network_device_id: Any, admin_status: Optional[Any] = None, managed: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_network_device_id_ssid_details_count(self, network_device_id: Any, admin_status: Optional[Any] = None, managed: Optional[Any] = None) -> Dict[str, Any]:
         """Get SSID Count for specific Wireless Controller
 
         Retrieves the count of SSIDs associated with the specific Wireless Controller.
@@ -5659,7 +5884,8 @@ def get_dna_intent_api_v1_wireless_controllers_network_device_id_ssid_details_co
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostic_validation_sets_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostic_validation_sets_id(self, id: Any) -> Dict[str, Any]:
         """Retrieves validation details for a validation set
 
         Retrieves validation details for the given validation set id
@@ -5680,7 +5906,8 @@ def get_dna_intent_api_v1_diagnostic_validation_sets_id(self, id: Any) -> Dict[s
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_settings_sacct(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_settings_sacct(self) -> Dict[str, Any]:
         """Get Smart Account List
 
         Returns the list of Smart Account domains
@@ -5696,7 +5923,8 @@ def get_dna_intent_api_v1_onboarding_pnp_settings_sacct(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-settings/sacct'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_layer3_virtual_networks(self, virtual_network_name: Optional[Any] = None, fabric_id: Optional[Any] = None, anchored_site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_layer3_virtual_networks(self, virtual_network_name: Optional[Any] = None, fabric_id: Optional[Any] = None, anchored_site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get layer 3 virtual networks
 
         Returns a list of layer 3 virtual networks that match the provided query parameters.
@@ -5727,7 +5955,8 @@ def get_dna_intent_api_v1_sda_layer3_virtual_networks(self, virtual_network_name
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_layer3_virtual_networks(self, virtual_network_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_layer3_virtual_networks(self, virtual_network_name: Optional[Any] = None) -> Dict[str, Any]:
         """Delete layer 3 virtual networks
 
         Deletes layer 3 virtual networks based on user input.
@@ -5749,7 +5978,8 @@ def delete_dna_intent_api_v1_sda_layer3_virtual_networks(self, virtual_network_n
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_layer3_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_layer3_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
         """Add layer 3 virtual networks
 
         Adds layer 3 virtual networks based on user input.
@@ -5770,7 +6000,8 @@ def post_dna_intent_api_v1_sda_layer3_virtual_networks(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/sda/layer3VirtualNetworks'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_layer3_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_layer3_virtual_networks(self, content__type: Any) -> Dict[str, Any]:
         """Update layer 3 virtual networks
 
         Updates layer 3 virtual networks based on user input.
@@ -5791,7 +6022,8 @@ def put_dna_intent_api_v1_sda_layer3_virtual_networks(self, content__type: Any) 
         url = self.base_url + '/dna/intent/api/v1/sda/layer3VirtualNetworks'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_file_namespace(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_file_namespace(self) -> Dict[str, Any]:
         """Get list of available namespaces
 
         Returns list of available namespaces
@@ -5807,7 +6039,8 @@ def get_dna_intent_api_v1_file_namespace(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/file/namespace'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, content__type: Any, site_id: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, content__type: Any, site_id: Any, id: Any) -> Dict[str, Any]:
         """Update SSID
 
         This API allows the user to update an SSID (Service Set Identifier) at the given site
@@ -5831,7 +6064,8 @@ def put_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, content
         url = url.format(site_id=site_id, id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, site_id: Any, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, site_id: Any, id: Any) -> Dict[str, Any]:
         """Get SSID by ID
 
         This API allows the user to get an SSID (Service Set Identifier) by ID at the given site
@@ -5852,7 +6086,8 @@ def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, site_id
         url = url.format(site_id=site_id, id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, site_id: Any, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, site_id: Any, id: Any) -> Dict[str, Any]:
         """Delete SSID
 
         This API allows the user to delete an SSID (Service Set Identifier) at the global level, if the SSID is not mapped to any Wireless Profile
@@ -5873,7 +6108,8 @@ def delete_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_id(self, site
         url = url.format(site_id=site_id, id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_product_names_product_name_ordinal(self, product_name_ordinal: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_product_names_product_name_ordinal(self, product_name_ordinal: Any) -> Dict[str, Any]:
         """Retrieve network device product name
 
         Get the network device product name, its ordinal, and supported PIDs.
@@ -5893,7 +6129,8 @@ def get_dna_intent_api_v1_product_names_product_name_ordinal(self, product_name_
         url = url.format(product_name_ordinal=product_name_ordinal)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_flexible_report_report_report_id_executions(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_flexible_report_report_report_id_executions(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
         """Get Execution Id by Report Id
 
         Get Execution Id by Report Id
@@ -5916,7 +6153,8 @@ def get_dna_data_api_v1_flexible_report_report_report_id_executions(self, conten
         url = url.format(report_id=report_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_count(self) -> Dict[str, Any]:
         """Get MobilityGroups Count
 
         Retrieves count of mobility groups configured
@@ -5932,7 +6170,8 @@ def get_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_count(se
         url = self.base_url + '/dna/intent/api/v1/wirelessControllers/wirelessMobilityGroups/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tasks_id_detail(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tasks_id_detail(self, id: Any) -> Dict[str, Any]:
         """Get task details by ID
 
         Returns the task details for the given task ID
@@ -5952,7 +6191,8 @@ def get_dna_intent_api_v1_tasks_id_detail(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_devices_resync_interval_settings(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_devices_resync_interval_settings(self) -> Dict[str, Any]:
         """Update global resync interval
 
         Updates the resync interval (in minutes) globally for devices which do not have custom resync interval. To override this setting for all network devices refer to [/networkDevices/resyncIntervalSettings/override]
@@ -5968,7 +6208,8 @@ def put_dna_intent_api_v1_network_devices_resync_interval_settings(self) -> Dict
         url = self.base_url + '/dna/intent/api/v1/networkDevices/resyncIntervalSettings'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_custom_prompt(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_custom_prompt(self) -> Dict[str, Any]:
         """Custom-prompt support GET API
 
         Returns supported custom prompts by Catalyst Center
@@ -5984,7 +6225,8 @@ def get_dna_intent_api_v1_network_device_custom_prompt(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/network-device/custom-prompt'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_device_custom_prompt(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_device_custom_prompt(self, content__type: Any) -> Dict[str, Any]:
         """Custom Prompt POST API
 
         Save custom prompt added by user in Catalyst Center. API will always override the existing prompts. User should provide all the custom prompt in case of any update
@@ -6005,7 +6247,8 @@ def post_dna_intent_api_v1_network_device_custom_prompt(self, content__type: Any
         url = self.base_url + '/dna/intent/api/v1/network-device/custom-prompt'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_security_advisory_advisory(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_security_advisory_advisory(self) -> Dict[str, Any]:
         """Get Advisories List
 
         Retrieves list of advisories on the network
@@ -6021,7 +6264,8 @@ def get_dna_intent_api_v1_security_advisory_advisory(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/security-advisory/advisory'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_device_replacement_workflow(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_device_replacement_workflow(self, content__type: Any) -> Dict[str, Any]:
         """Deploy device replacement workflow
 
         API to trigger RMA workflow that will replace faulty device with replacement device with same configuration and images
@@ -6042,7 +6286,8 @@ def post_dna_intent_api_v1_device_replacement_workflow(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/device-replacement/workflow'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_id_vlan(self, id: Any, interface_type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_id_vlan(self, id: Any, interface_type: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Interface VLANs
 
         Returns Device Interface VLANs. If parameter value is null or empty, it won't return any value in response.
@@ -6066,7 +6311,8 @@ def get_dna_intent_api_v1_network_device_id_vlan(self, id: Any, interface_type: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_file_namespace_name_space(self, name_space: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_file_namespace_name_space(self, name_space: Any) -> Dict[str, Any]:
         """Get list of files
 
         Returns list of files under a specific namespace
@@ -6086,7 +6332,8 @@ def get_dna_intent_api_v1_file_namespace_name_space(self, name_space: Any) -> Di
         url = url.format(name_space=name_space)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_images_distribution_server_settings_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_images_distribution_server_settings_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update remote image distribution server
 
         Update remote image distribution server details.
@@ -6109,7 +6356,8 @@ def put_dna_intent_api_v1_images_distribution_server_settings_id(self, content__
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_images_distribution_server_settings_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_images_distribution_server_settings_id(self, id: Any) -> Dict[str, Any]:
         """Remove image distribution server
 
         Delete remote image distribution server.
@@ -6129,7 +6377,8 @@ def delete_dna_intent_api_v1_images_distribution_server_settings_id(self, id: An
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images_distribution_server_settings_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images_distribution_server_settings_id(self, id: Any) -> Dict[str, Any]:
         """Retrieve specific image distribution server
 
         Retrieve image distribution server for the given server identifier
@@ -6149,7 +6398,8 @@ def get_dna_intent_api_v1_images_distribution_server_settings_id(self, id: Any) 
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_app_policy(self, policy_scope: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_app_policy(self, policy_scope: Optional[Any] = None) -> Dict[str, Any]:
         """Get Application Policy
 
         Get all existing application policies
@@ -6171,7 +6421,8 @@ def get_dna_intent_api_v1_app_policy(self, policy_scope: Optional[Any] = None) -
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_template_programmer_template_preview(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_template_programmer_template_preview(self, content__type: Any) -> Dict[str, Any]:
         """Preview Template
 
         API to preview a template.
@@ -6192,7 +6443,8 @@ def put_dna_intent_api_v1_template_programmer_template_preview(self, content__ty
         url = self.base_url + '/dna/intent/api/v1/template-programmer/template/preview'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_extranet_policies_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_extranet_policies_id(self, id: Any) -> Dict[str, Any]:
         """Delete extranet policy by id
 
         Deletes an extranet policy based on id.
@@ -6212,7 +6464,8 @@ def delete_dna_intent_api_v1_sda_extranet_policies_id(self, id: Any) -> Dict[str
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_onboarding_pnp_workflow_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_onboarding_pnp_workflow_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update Workflow
 
         Updates an existing workflow
@@ -6235,7 +6488,8 @@ def put_dna_intent_api_v1_onboarding_pnp_workflow_id(self, content__type: Any, i
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_workflow_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_workflow_id(self, id: Any) -> Dict[str, Any]:
         """Get Workflow by Id
 
         Returns a workflow specified by id
@@ -6255,7 +6509,8 @@ def get_dna_intent_api_v1_onboarding_pnp_workflow_id(self, id: Any) -> Dict[str,
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_onboarding_pnp_workflow_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_onboarding_pnp_workflow_id(self, id: Any) -> Dict[str, Any]:
         """Delete Workflow By Id
 
         Deletes a workflow specified by id
@@ -6275,7 +6530,8 @@ def delete_dna_intent_api_v1_onboarding_pnp_workflow_id(self, id: Any) -> Dict[s
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_security_advisory_advisory_aggregate(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_security_advisory_advisory_aggregate(self) -> Dict[str, Any]:
         """Get Advisories Summary
 
         Retrieves summary of advisories on the network.
@@ -6291,7 +6547,8 @@ def get_dna_intent_api_v1_security_advisory_advisory_aggregate(self) -> Dict[str
         url = self.base_url + '/dna/intent/api/v1/security-advisory/advisory/aggregate'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_devices_resync_interval_settings_override(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_devices_resync_interval_settings_override(self) -> Dict[str, Any]:
         """Override resync interval
 
         Overrides the global resync interval on all network devices. This essentially removes device specific intervals if set.
@@ -6307,7 +6564,8 @@ def post_dna_intent_api_v1_network_devices_resync_interval_settings_override(sel
         url = self.base_url + '/dna/intent/api/v1/networkDevices/resyncIntervalSettings/override'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tag_member_type(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tag_member_type(self) -> Dict[str, Any]:
         """Get Tag resource types
 
         Returns list of supported resource types
@@ -6323,7 +6581,8 @@ def get_dna_intent_api_v1_tag_member_type(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/tag/member/type'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_port_assignments_count(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, interface_name: Optional[Any] = None, data_vlan_name: Optional[Any] = None, voice_vlan_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_port_assignments_count(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, interface_name: Optional[Any] = None, data_vlan_name: Optional[Any] = None, voice_vlan_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get port assignment count
 
         Returns the count of port assignments that match the provided query parameters.
@@ -6353,7 +6612,8 @@ def get_dna_intent_api_v1_sda_port_assignments_count(self, fabric_id: Optional[A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_start_index_records_to_return(self, start_index: Any, records_to_return: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_start_index_records_to_return(self, start_index: Any, records_to_return: Any) -> Dict[str, Any]:
         """Get Discoveries by range
 
         Returns the discoveries by specified range
@@ -6374,7 +6634,8 @@ def get_dna_intent_api_v1_discovery_start_index_records_to_return(self, start_in
         url = url.format(start_index=start_index, records_to_return=records_to_return)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_snmpv2_read_community(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_snmpv2_read_community(self, content__type: Any) -> Dict[str, Any]:
         """Update SNMP read community
 
         Updates global SNMP read community
@@ -6395,7 +6656,8 @@ def put_dna_intent_api_v1_global_credential_snmpv2_read_community(self, content_
         url = self.base_url + '/dna/intent/api/v1/global-credential/snmpv2-read-community'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_credential_snmpv2_read_community(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_credential_snmpv2_read_community(self, content__type: Any) -> Dict[str, Any]:
         """Create SNMP read community
 
         Adds global SNMP read community
@@ -6416,7 +6678,8 @@ def post_dna_intent_api_v1_global_credential_snmpv2_read_community(self, content
         url = self.base_url + '/dna/intent/api/v1/global-credential/snmpv2-read-community'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_integration_settings_itsm_instances(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_integration_settings_itsm_instances(self) -> Dict[str, Any]:
         """Get all ITSM Integration settings
 
         Fetches all ITSM Integration settings
@@ -6432,7 +6695,8 @@ def get_dna_intent_api_v1_integration_settings_itsm_instances(self) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/integration-settings/itsm/instances'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_licenses_usage_smart_account_smart_account_id_virtual_account_virtual_account_name(self, smart_account_id: Any, virtual_account_name: Any, device_type: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_licenses_usage_smart_account_smart_account_id_virtual_account_virtual_account_name(self, smart_account_id: Any, virtual_account_name: Any, device_type: Any) -> Dict[str, Any]:
         """License Usage Details
 
         Get count of purchased and in use Cisco DNA and Network licenses.
@@ -6457,7 +6721,8 @@ def get_dna_intent_api_v1_licenses_usage_smart_account_smart_account_id_virtual_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_areas_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_areas_id(self, id: Any) -> Dict[str, Any]:
         """Deletes an area
 
         Deletes an area in the network hierarchy. This operations fails if there are any child areas or buildings for this area.
@@ -6477,7 +6742,8 @@ def delete_dna_intent_api_v1_areas_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_areas_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_areas_id(self, id: Any) -> Dict[str, Any]:
         """Gets an area
 
         Gets an area in the network hierarchy.
@@ -6497,7 +6763,8 @@ def get_dna_intent_api_v1_areas_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_areas_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_areas_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Updates an area
 
         Updates an area in the network hierarchy.
@@ -6520,7 +6787,8 @@ def put_dna_intent_api_v1_areas_id(self, content__type: Any, id: Any) -> Dict[st
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_intent_api_v1_health_score_definitions_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, id: Optional[Any] = None, include_for_overall_health: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_intent_api_v1_health_score_definitions_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, id: Optional[Any] = None, include_for_overall_health: Optional[Any] = None) -> Dict[str, Any]:
         """Get the count of health score definitions based on provided filters.
 
         Get the count of health score definitions based on provided filters. Supported filters are id, name and overall health include status. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-issueAndHealthDefinitions-1.0.0-resolved.yaml
@@ -6558,7 +6826,8 @@ id=015d9cba-4f53-4087-8317-7e49e5ffef46&id=015d9cba-4f53-4087-8317-7e49e5ffef47 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_extranet_policies_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_extranet_policies_count(self) -> Dict[str, Any]:
         """Get extranet policy count
 
         Returns the count of extranet policies that match the provided query parameters.
@@ -6574,7 +6843,8 @@ def get_dna_intent_api_v1_sda_extranet_policies_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/sda/extranetPolicies/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_devices_id_resync_interval_settings(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_devices_id_resync_interval_settings(self, id: Any) -> Dict[str, Any]:
         """Get resync interval for the network device
 
         Fetch the reysnc interval for the given network device id.
@@ -6594,7 +6864,8 @@ def get_dna_intent_api_v1_network_devices_id_resync_interval_settings(self, id: 
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_devices_id_resync_interval_settings(self, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_devices_id_resync_interval_settings(self, id: Any) -> Dict[str, Any]:
         """Update resync interval for the network device
 
         Update the resync interval (in minutes) for the given network device id.
@@ -6619,7 +6890,8 @@ To use global settings, set interval as `null`.
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_interfaces(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_interfaces(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get Interfaces
 
         This API allows the user to get all Interfaces
@@ -6643,7 +6915,8 @@ def get_dna_intent_api_v1_wireless_settings_interfaces(self, limit: Optional[Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_settings_interfaces(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_settings_interfaces(self, content__type: Any) -> Dict[str, Any]:
         """Create Interface
 
         This API allows the user to create an interface
@@ -6664,7 +6937,8 @@ def post_dna_intent_api_v1_wireless_settings_interfaces(self, content__type: Any
         url = self.base_url + '/dna/intent/api/v1/wirelessSettings/interfaces'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_data_view_groups(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_data_view_groups(self) -> Dict[str, Any]:
         """Get all view groups
 
         Gives a list of summary of all view groups.
@@ -6680,7 +6954,8 @@ def get_dna_intent_api_v1_data_view_groups(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/data/view-groups'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_events(self, tags: Any, event_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_events(self, tags: Any, event_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Events
 
         Gets the list of registered Events with provided eventIds or tags as mandatory
@@ -6712,7 +6987,8 @@ def get_dna_intent_api_v1_events(self, tags: Any, event_id: Optional[Any] = None
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription_email(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription_email(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Email Event Subscriptions
 
         Gets the list of email Subscriptions's based on provided query params
@@ -6752,7 +7028,8 @@ def get_dna_intent_api_v1_event_subscription_email(self, event_ids: Optional[Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_subscription_email(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_subscription_email(self, content__type: Any) -> Dict[str, Any]:
         """Create Email Event Subscription
 
         Create Email Subscription Endpoint for list of registered events.
@@ -6773,7 +7050,8 @@ def post_dna_intent_api_v1_event_subscription_email(self, content__type: Any) ->
         url = self.base_url + '/dna/intent/api/v1/event/subscription/email'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_subscription_email(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_subscription_email(self, content__type: Any) -> Dict[str, Any]:
         """Update Email Event Subscription
 
         Update Email Subscription Endpoint for list of registered events
@@ -6794,7 +7072,8 @@ def put_dna_intent_api_v1_event_subscription_email(self, content__type: Any) -> 
         url = self.base_url + '/dna/intent/api/v1/event/subscription/email'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_layer3_virtual_networks_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_layer3_virtual_networks_id(self, id: Any) -> Dict[str, Any]:
         """Delete layer 3 virtual network by id
 
         Deletes a layer 3 virtual network based on id.
@@ -6814,7 +7093,8 @@ def delete_dna_intent_api_v1_sda_layer3_virtual_networks_id(self, id: Any) -> Di
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription_details_email(self, name: Optional[Any] = None, instance_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription_details_email(self, name: Optional[Any] = None, instance_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Email Subscription Details
 
         Gets the list of subscription details for specified connectorType
@@ -6846,7 +7126,8 @@ def get_dna_intent_api_v1_event_subscription_details_email(self, name: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_assurance_issues_ignore(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_assurance_issues_ignore(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Ignore the given list of issues
 
         Ignores the given list of issues. The response contains the list of issues which were successfully ignored as well as the issues which are failed to ignore. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesLifecycle-1.0.0-resolved.yaml
@@ -6870,7 +7151,8 @@ def post_dna_intent_api_v1_assurance_issues_ignore(self, content__type: Any, x__
         url = self.base_url + '/dna/intent/api/v1/assuranceIssues/ignore'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_tag_member(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_tag_member(self, content__type: Any) -> Dict[str, Any]:
         """Update tag membership
 
         Update tag membership. As part of the request payload through this API, only the specified members are added / retained to the given input tags. Possible values of memberType attribute in the request payload can be queried by using the /tag/member/type API
@@ -6891,7 +7173,8 @@ def put_dna_intent_api_v1_tag_member(self, content__type: Any) -> Dict[str, Any]
         url = self.base_url + '/dna/intent/api/v1/tag/member'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_aaa_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_aaa_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve AAA settings for a site
 
         Retrieve AAA settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the setting is unset at a site.
@@ -6915,7 +7198,8 @@ def get_dna_intent_api_v1_sites_id_aaa_settings(self, id: Any, inherited: Option
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_aaa_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_aaa_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set AAA settings for a site
 
         Set AAA settings for a site; `null` values indicate that the settings will be inherited from the parent site; empty objects (`{}`) indicate that the settings is unset.
@@ -6938,7 +7222,8 @@ def put_dna_intent_api_v1_sites_id_aaa_settings(self, content__type: Any, id: An
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_network_device_device_id_interface_name(self, device_id: Any, name: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_network_device_device_id_interface_name(self, device_id: Any, name: Any) -> Dict[str, Any]:
         """Get Interface details by device Id and interface name
 
         Returns interface by specified device Id and interface name
@@ -6962,7 +7247,8 @@ def get_dna_intent_api_v1_interface_network_device_device_id_interface_name(self
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
         """Create Global Credentials V2
 
         API to create new global credentials. Multiple credentials of various types can be passed at once. Please refer sample Request Body for more information.
@@ -6978,7 +7264,8 @@ def post_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/global-credential'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
         """Get All Global Credentials V2
 
         API to get device credentials' details. It fetches all global credentials of all types at once, without the need to pass any input parameters.
@@ -6994,7 +7281,8 @@ def get_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/global-credential'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
         """Update Global Credentials V2
 
         API to update device credentials. Multiple credentials can be passed at once, but only a single credential of a given type can be passed at once. Please refer sample Request Body for more information.
@@ -7010,7 +7298,8 @@ def put_dna_intent_api_v2_global_credential(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/global-credential'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_access_points_factory_reset_request_status(self, task_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_access_points_factory_reset_request_status(self, task_id: Any) -> Dict[str, Any]:
         """Get Access Point(s) Factory Reset status
 
         This API returns each AP Factory Reset initiation status.
@@ -7032,7 +7321,8 @@ def get_dna_intent_api_v1_wireless_access_points_factory_reset_request_status(se
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_id_summary(self, id: Any, task_id: Optional[Any] = None, sort_by: Optional[Any] = None, sort_order: Optional[Any] = None, ip_address: Optional[Any] = None, ping_status: Optional[Any] = None, snmp_status: Optional[Any] = None, cli_status: Optional[Any] = None, netconf_status: Optional[Any] = None, http_status: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_id_summary(self, id: Any, task_id: Optional[Any] = None, sort_by: Optional[Any] = None, sort_order: Optional[Any] = None, ip_address: Optional[Any] = None, ping_status: Optional[Any] = None, snmp_status: Optional[Any] = None, cli_status: Optional[Any] = None, netconf_status: Optional[Any] = None, http_status: Optional[Any] = None) -> Dict[str, Any]:
         """Get network devices from Discovery
 
         Returns the devices discovered in the given discovery based on given filters. Discovery ID can be obtained using the "Get Discoveries by range" API.
@@ -7072,7 +7362,8 @@ def get_dna_intent_api_v1_discovery_id_summary(self, id: Any, task_id: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites(self, name: Optional[Any] = None, name_hierarchy: Optional[Any] = None, type: Optional[Any] = None, units_of_measure: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites(self, name: Optional[Any] = None, name_hierarchy: Optional[Any] = None, type: Optional[Any] = None, units_of_measure: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get sites
 
         Get sites.
@@ -7104,7 +7395,8 @@ def get_dna_intent_api_v1_sites(self, name: Optional[Any] = None, name_hierarchy
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabrics_vlan_to_ssids_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabrics_vlan_to_ssids_count(self) -> Dict[str, Any]:
         """Return the count of all the fabric site which has SSID to IP Pool mapping 
 
         Return the count of all the fabric site which has SSID to IP Pool mapping 
@@ -7120,7 +7412,8 @@ def get_dna_intent_api_v1_sda_fabrics_vlan_to_ssids_count(self) -> Dict[str, Any
         url = self.base_url + '/dna/intent/api/v1/sda/fabrics/vlanToSsids/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_subscription(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_subscription(self, content__type: Any) -> Dict[str, Any]:
         """Create Event Subscriptions
 
         Subscribe SubscriptionEndpoint to list of registered events (Deprecated)
@@ -7141,7 +7434,8 @@ def post_dna_intent_api_v1_event_subscription(self, content__type: Any) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/event/subscription'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_subscription(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_subscription(self, content__type: Any) -> Dict[str, Any]:
         """Update Event Subscriptions
 
         Update SubscriptionEndpoint to list of registered events(Deprecated)
@@ -7162,7 +7456,8 @@ def put_dna_intent_api_v1_event_subscription(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/event/subscription'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_event_subscription(self, content__type: Any, subscriptions: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_event_subscription(self, content__type: Any, subscriptions: Any) -> Dict[str, Any]:
         """Delete Event Subscriptions
 
         Delete EventSubscriptions
@@ -7187,7 +7482,8 @@ def delete_dna_intent_api_v1_event_subscription(self, content__type: Any, subscr
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Event Subscriptions
 
         Gets the list of Subscriptions's based on provided offset and limit (Deprecated)
@@ -7217,7 +7513,8 @@ def get_dna_intent_api_v1_event_subscription(self, event_ids: Optional[Any] = No
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_site_health_summaries_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_site_health_summaries_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Read site health summary data by site id.
 
         Get a health summary for a specific site by providing the unique site id in the url path.
@@ -7297,7 +7594,8 @@ attribute=siteHierarchy&attribute=clientCount (multiple attributes requested)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_floors_floor_id_planned_access_points(self, content__type: Any, floor_id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_floors_floor_id_planned_access_points(self, content__type: Any, floor_id: Any) -> Dict[str, Any]:
         """Update Planned Access Point for Floor
 
         Allows updating a planned access point on an existing floor map including its planned radio and antenna details.  Use the Get variant of this API to fetch the existing planned access points for the floor.  The payload to update a planned access point is in the same format, albeit a single object instead of a list, of that API.
@@ -7320,7 +7618,8 @@ def put_dna_intent_api_v1_floors_floor_id_planned_access_points(self, content__t
         url = url.format(floor_id=floor_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_floors_floor_id_planned_access_points(self, floor_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None, radios: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_floors_floor_id_planned_access_points(self, floor_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None, radios: Optional[Any] = None) -> Dict[str, Any]:
         """Get Planned Access Points for Floor
 
         Provides a list of Planned Access Points for the Floor it is requested for
@@ -7348,7 +7647,8 @@ def get_dna_intent_api_v1_floors_floor_id_planned_access_points(self, floor_id: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_floors_floor_id_planned_access_points(self, content__type: Any, floor_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_floors_floor_id_planned_access_points(self, content__type: Any, floor_id: Any) -> Dict[str, Any]:
         """Create Planned Access Point for Floor
 
         Allows creation of a new planned access point on an existing floor map including its planned radio and antenna details.  Use the Get variant of this API to fetch any existing planned access points for the floor.  The payload to create a planned access point is in the same format, albeit a single object instead of a list, of that API.
@@ -7371,7 +7671,8 @@ def post_dna_intent_api_v1_floors_floor_id_planned_access_points(self, content__
         url = url.format(floor_id=floor_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_device_replacement(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_device_replacement(self, content__type: Any) -> Dict[str, Any]:
         """UnMark device for replacement
 
         UnMarks device for replacement
@@ -7392,7 +7693,8 @@ def put_dna_intent_api_v1_device_replacement(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/device-replacement'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_device_replacement(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_device_replacement(self, content__type: Any) -> Dict[str, Any]:
         """Mark device for replacement
 
         Marks device for replacement
@@ -7413,7 +7715,8 @@ def post_dna_intent_api_v1_device_replacement(self, content__type: Any) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/device-replacement'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_device_replacement(self, faulty_device_name: Optional[Any] = None, faulty_device_platform: Optional[Any] = None, replacement_device_platform: Optional[Any] = None, faulty_device_serial_number: Optional[Any] = None, replacement_device_serial_number: Optional[Any] = None, replacement_status: Optional[Any] = None, family: Optional[Any] = None, sort_by: Optional[Any] = None, sort_order: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_device_replacement(self, faulty_device_name: Optional[Any] = None, faulty_device_platform: Optional[Any] = None, replacement_device_platform: Optional[Any] = None, faulty_device_serial_number: Optional[Any] = None, replacement_device_serial_number: Optional[Any] = None, replacement_status: Optional[Any] = None, family: Optional[Any] = None, sort_by: Optional[Any] = None, sort_order: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Return list of replacement devices with replacement details
 
         Get list of replacement devices with replacement details and it can filter replacement devices based on Faulty Device Name,Faulty Device Platform, Replacement Device Platform, Faulty Device Serial Number,Replacement Device Serial Number, Device Replacement status, Product Family.
@@ -7455,7 +7758,8 @@ def get_dna_intent_api_v1_device_replacement(self, faulty_device_name: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_discovery_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_discovery_id(self, id: Any) -> Dict[str, Any]:
         """Delete discovery by Id
 
         Stops the discovery for the given Discovery ID and removes it. Discovery ID can be obtained using the "Get Discoveries by range" API.
@@ -7475,7 +7779,8 @@ def delete_dna_intent_api_v1_discovery_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_id(self, id: Any) -> Dict[str, Any]:
         """Get Discovery by Id
 
         Returns discovery by Discovery ID. Discovery ID can be obtained using the "Get Discoveries by range" API.
@@ -7495,7 +7800,8 @@ def get_dna_intent_api_v1_discovery_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_config(self, device_id: Optional[Any] = None, file_type: Optional[Any] = None, created_time: Optional[Any] = None, created_by: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_config(self, device_id: Optional[Any] = None, file_type: Optional[Any] = None, created_time: Optional[Any] = None, created_by: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get configuration archive details
 
         Returns the historical device configurations (running configuration , startup configuration , vlan if applicable) by specified criteria
@@ -7527,7 +7833,8 @@ def get_dna_intent_api_v1_network_device_config(self, device_id: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_credential_http_write(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_credential_http_write(self, content__type: Any) -> Dict[str, Any]:
         """Create HTTP write credentials
 
         Adds global HTTP write credentials
@@ -7548,7 +7855,8 @@ def post_dna_intent_api_v1_global_credential_http_write(self, content__type: Any
         url = self.base_url + '/dna/intent/api/v1/global-credential/http-write'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_http_write(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_http_write(self, content__type: Any) -> Dict[str, Any]:
         """Update HTTP write credentials
 
         Updates global HTTP write credentials
@@ -7569,7 +7877,8 @@ def put_dna_intent_api_v1_global_credential_http_write(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/global-credential/http-write'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_security_advisory_device_device_id_advisory(self, device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_security_advisory_device_device_id_advisory(self, device_id: Any) -> Dict[str, Any]:
         """Get Advisories Per Device
 
         Retrieves list of advisories for a device
@@ -7589,7 +7898,8 @@ def get_dna_intent_api_v1_security_advisory_device_device_id_advisory(self, devi
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_count(self) -> Dict[str, Any]:
         """Get Device Interface Count for Multiple Devices
 
         Returns the count of interfaces for all devices
@@ -7605,7 +7915,8 @@ def get_dna_intent_api_v1_interface_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/interface/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostic_validation_workflows_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, run_status: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostic_validation_workflows_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, run_status: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the count of validation workflows
 
         Retrieves the count of workflows that have been successfully submitted and are currently available. 
@@ -7632,7 +7943,8 @@ def get_dna_intent_api_v1_diagnostic_validation_workflows_count(self, start_time
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_snmp_property(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_snmp_property(self) -> Dict[str, Any]:
         """Get SNMP properties
 
         Returns SNMP properties
@@ -7648,7 +7960,8 @@ def get_dna_intent_api_v1_snmp_property(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/snmp-property'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_snmp_property(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_snmp_property(self, content__type: Any) -> Dict[str, Any]:
         """Create/Update SNMP properties
 
         Adds SNMP properties
@@ -7669,7 +7982,8 @@ def post_dna_intent_api_v1_snmp_property(self, content__type: Any) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/snmp-property'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_compliance_detail_count(self, compliance_type: Optional[Any] = None, compliance_status: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_compliance_detail_count(self, compliance_type: Optional[Any] = None, compliance_status: Optional[Any] = None) -> Dict[str, Any]:
         """Get Compliance Detail Count
 
         Return  Compliance Count Detail
@@ -7693,7 +8007,8 @@ def get_dna_intent_api_v1_compliance_detail_count(self, compliance_type: Optiona
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_interfaces_query(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_interfaces_query(self, content__type: Any) -> Dict[str, Any]:
         """Gets the list of interfaces across the Network Devices based on the provided complex filters and aggregation functions
 
         Gets the list of interfaces across the Network Devices based on the provided complex filters and aggregation functions
@@ -7718,7 +8033,8 @@ The supported sorting options are: name, adminStatus, description, duplexConfig,
         url = self.base_url + '/dna/data/api/v1/interfaces/query'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_client_health(self, timestamp: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_client_health(self, timestamp: Optional[Any] = None) -> Dict[str, Any]:
         """Get Overall Client Health
 
         Returns Overall Client Health information by Client type (Wired and Wireless) for any given point of time
@@ -7740,7 +8056,8 @@ def get_dna_intent_api_v1_client_health(self, timestamp: Optional[Any] = None) -
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_uuid_line_card(self, device_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_uuid_line_card(self, device_uuid: Any) -> Dict[str, Any]:
         """Get Linecard details
 
         Get line card detail for a given deviceuuid.  Response will contain serial no, part no, switch no and slot no.
@@ -7760,7 +8077,8 @@ def get_dna_intent_api_v1_network_device_device_uuid_line_card(self, device_uuid
         url = url.format(device_uuid=device_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_interfaces_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, network_device_mac_address: Optional[Any] = None, interface_id: Optional[Any] = None, interface_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_interfaces_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, network_device_mac_address: Optional[Any] = None, interface_id: Optional[Any] = None, interface_name: Optional[Any] = None) -> Dict[str, Any]:
         """Gets the total Network device interface counts in the specified time range. When there is no start and end time specified returns the latest interfaces total count.
 
         Gets the total Network device interface counts. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-interfaces-1.0.2-resolved.yaml
@@ -7872,7 +8190,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_profiles_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_profiles_count(self) -> Dict[str, Any]:
         """Get Wireless Profiles Count
 
         This API allows the user to get count of all wireless profiles
@@ -7888,7 +8207,8 @@ def get_dna_intent_api_v1_wireless_profiles_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/wirelessProfiles/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_tag_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_tag_id(self, id: Any) -> Dict[str, Any]:
         """Delete Tag
 
         Deletes a tag specified by id
@@ -7908,7 +8228,8 @@ def delete_dna_intent_api_v1_tag_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tag_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tag_id(self, id: Any) -> Dict[str, Any]:
         """Get Tag by Id
 
         Returns tag specified by Id
@@ -7928,7 +8249,8 @@ def get_dna_intent_api_v1_tag_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_event_event_series_audit_log_summary(self, parent_instance_id: Optional[Any] = None, is_parent_only: Optional[Any] = None, instance_id: Optional[Any] = None, name: Optional[Any] = None, event_id: Optional[Any] = None, category: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, user_id: Optional[Any] = None, context: Optional[Any] = None, event_hierarchy: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, is_system_events: Optional[Any] = None, description: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_event_event_series_audit_log_summary(self, parent_instance_id: Optional[Any] = None, is_parent_only: Optional[Any] = None, instance_id: Optional[Any] = None, name: Optional[Any] = None, event_id: Optional[Any] = None, category: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, user_id: Optional[Any] = None, context: Optional[Any] = None, event_hierarchy: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, is_system_events: Optional[Any] = None, description: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
         """Get AuditLog Summary
 
         Get Audit Log Summary from the Event-Hub
@@ -7986,7 +8308,8 @@ def get_dna_data_api_v1_event_event_series_audit_log_summary(self, parent_instan
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_anycast_gateways_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_anycast_gateways_id(self, id: Any) -> Dict[str, Any]:
         """Delete anycast gateway by id
 
         Deletes an anycast gateway based on id.
@@ -8006,7 +8329,8 @@ def delete_dna_intent_api_v1_sda_anycast_gateways_id(self, id: Any) -> Dict[str,
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_project_name_project_name_template_importtemplates(self, content__type: Any, project_name: Any, do_version: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_project_name_project_name_template_importtemplates(self, content__type: Any, project_name: Any, do_version: Optional[Any] = None) -> Dict[str, Any]:
         """Imports the templates provided
 
         Imports the templates provided in the DTO by project Name
@@ -8034,7 +8358,8 @@ If this flag is false and if template already exists, then operation fails with 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_network_site_id(self, site_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_network_site_id(self, site_id: Any) -> Dict[str, Any]:
         """Create Network V2
 
         API to create network settings for DHCP,  Syslog, SNMP, NTP, Network AAA, Client and Endpoint AAA, and/or DNS center server settings.
@@ -8054,7 +8379,8 @@ def post_dna_intent_api_v2_network_site_id(self, site_id: Any) -> Dict[str, Any]
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_network_site_id(self, site_id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_network_site_id(self, site_id: Any) -> Dict[str, Any]:
         """Update Network V2
 
         API to update network settings for DHCP, Syslog, SNMP, NTP, Network AAA, Client and Endpoint AAA, and/or DNS center server settings.
@@ -8074,7 +8400,8 @@ def put_dna_intent_api_v2_network_site_id(self, site_id: Any) -> Dict[str, Any]:
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_flexible_report_report_report_id_execute(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_flexible_report_report_report_id_execute(self, content__type: Any, report_id: Any) -> Dict[str, Any]:
         """Executing the Flexible report
 
         This API is used for executing the report
@@ -8097,7 +8424,8 @@ def post_dna_data_api_v1_flexible_report_report_report_id_execute(self, content_
         url = url.format(report_id=report_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_qos_device_interface_info_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_qos_device_interface_info_id(self, id: Any) -> Dict[str, Any]:
         """Delete Qos Device Interface Info
 
         Delete all qos device interface infos associate with network device id
@@ -8117,7 +8445,8 @@ def delete_dna_intent_api_v1_qos_device_interface_info_id(self, id: Any) -> Dict
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_template_programmer_project(self, name: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_template_programmer_project(self, name: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
         """Gets a list of projects
 
         List the projects
@@ -8141,7 +8470,8 @@ def get_dna_intent_api_v1_template_programmer_project(self, name: Optional[Any] 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_project(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_project(self, content__type: Any) -> Dict[str, Any]:
         """Create Project
 
         This API is used to create a new project.
@@ -8162,7 +8492,8 @@ def post_dna_intent_api_v1_template_programmer_project(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/template-programmer/project'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_template_programmer_project(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_template_programmer_project(self, content__type: Any) -> Dict[str, Any]:
         """Update Project
 
         This API is used to update an existing project.
@@ -8183,7 +8514,8 @@ def put_dna_intent_api_v1_template_programmer_project(self, content__type: Any) 
         url = self.base_url + '/dna/intent/api/v1/template-programmer/project'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_device_archive_cleartext(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_device_archive_cleartext(self, content__type: Any) -> Dict[str, Any]:
         """Export Device configurations
 
         Export Device configurations to an encrypted zip file
@@ -8204,7 +8536,8 @@ def post_dna_intent_api_v1_network_device_archive_cleartext(self, content__type:
         url = self.base_url + '/dna/intent/api/v1/network-device-archive/cleartext'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_lan_automation(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_lan_automation(self, content__type: Any) -> Dict[str, Any]:
         """LAN Automation Start V2
 
         Invoke V2 LAN Automation Start API, which supports optional auto-stop processing feature based on the provided timeout or a specific device list, or both. The stop processing will be executed automatically when either of the cases is satisfied, without specifically calling the stop API. The V2 API behaves similarly to V1 if no timeout or device list is provided, and the user needs to call the stop API for LAN Automation stop processing. With the V2 API, the user can also specify the level up to which the devices can be LAN automated.
@@ -8225,7 +8558,8 @@ def post_dna_intent_api_v2_lan_automation(self, content__type: Any) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v2/lan-automation'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostics_system_health_count(self, domain: Optional[Any] = None, subdomain: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostics_system_health_count(self, domain: Optional[Any] = None, subdomain: Optional[Any] = None) -> Dict[str, Any]:
         """System Health Count API
 
         This API gives the count of the latest system events
@@ -8249,7 +8583,8 @@ def get_dna_intent_api_v1_diagnostics_system_health_count(self, domain: Optional
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_authentication_policy_servers(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_authentication_policy_servers(self) -> Dict[str, Any]:
         """Add Authentication and Policy Server Access Configuration
 
         API to add AAA/ISE server access configuration. Protocol can be configured as either RADIUS OR TACACS OR RADIUS_TACACS. If configuring Cisco ISE server, after configuration, use ‘Cisco ISE Server Integration Status’ Intent API to check the integration status. Based on integration status, if require use 'Accept Cisco ISE Server Certificate for Cisco ISE Server Integration' Intent API to accept the Cisco ISE certificate for Cisco ISE server integration, then use again ‘Cisco ISE Server Integration Status’ Intent API to check the integration status.
@@ -8265,7 +8600,8 @@ def post_dna_intent_api_v1_authentication_policy_servers(self) -> Dict[str, Any]
         url = self.base_url + '/dna/intent/api/v1/authentication-policy-servers'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_authentication_policy_servers(self, is_ise_enabled: Optional[Any] = None, state: Optional[Any] = None, role: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_authentication_policy_servers(self, is_ise_enabled: Optional[Any] = None, state: Optional[Any] = None, role: Optional[Any] = None) -> Dict[str, Any]:
         """Get Authentication and Policy Servers
 
         API to get Authentication and Policy Servers
@@ -8291,7 +8627,8 @@ def get_dna_intent_api_v1_authentication_policy_servers(self, is_ise_enabled: Op
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_count(self, site_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_count(self, site_id: Any) -> Dict[str, Any]:
         """Get SSID Count by Site
 
         This API allows the user to get count of all SSIDs (Service Set Identifier) present at global site. 
@@ -8311,7 +8648,8 @@ def get_dna_intent_api_v1_sites_site_id_wireless_settings_ssids_count(self, site
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_licenses_device_summary(self, page_number: Any, order: Any, limit: Any, sort_by: Optional[Any] = None, dna_level: Optional[Any] = None, device_type: Optional[Any] = None, registration_status: Optional[Any] = None, virtual_account_name: Optional[Any] = None, smart_account_id: Optional[Any] = None, device_uuid: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_licenses_device_summary(self, page_number: Any, order: Any, limit: Any, sort_by: Optional[Any] = None, dna_level: Optional[Any] = None, device_type: Optional[Any] = None, registration_status: Optional[Any] = None, virtual_account_name: Optional[Any] = None, smart_account_id: Optional[Any] = None, device_uuid: Optional[Any] = None) -> Dict[str, Any]:
         """Device License Summary
 
         Show license summary of device(s).
@@ -8351,7 +8689,8 @@ def get_dna_intent_api_v1_licenses_device_summary(self, page_number: Any, order:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_maps_import_import_context_uuid(self, import_context_uuid: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_maps_import_import_context_uuid(self, import_context_uuid: Any) -> Dict[str, Any]:
         """Import Map Archive - Cancel an Import
 
         Cancels a previously initatied import, allowing the system to cleanup cached resources about that import data, and ensures the import cannot accidentally be performed / approved at a later time.
@@ -8371,7 +8710,8 @@ def delete_dna_intent_api_v1_maps_import_import_context_uuid(self, import_contex
         url = url.format(import_context_uuid=import_context_uuid)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_compliance_device_uuid_detail(self, device_uuid: Any, category: Optional[Any] = None, compliance_type: Optional[Any] = None, diff_list: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_compliance_device_uuid_detail(self, device_uuid: Any, category: Optional[Any] = None, compliance_type: Optional[Any] = None, diff_list: Optional[Any] = None) -> Dict[str, Any]:
         """Compliance Details of Device
 
         Return compliance detailed report for a device.
@@ -8399,7 +8739,8 @@ def get_dna_intent_api_v1_compliance_device_uuid_detail(self, device_uuid: Any, 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_count(self, profile_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_count(self, profile_id: Any) -> Dict[str, Any]:
         """Retrieves the count of sites that the given network profile for sites is assigned to
 
         Retrieves the count of sites that the given network profile for sites is assigned to.
@@ -8419,7 +8760,8 @@ def get_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments
         url = url.format(profile_id=profile_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_provision_devices(self, network_device_id: Optional[Any] = None, site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_provision_devices(self, network_device_id: Optional[Any] = None, site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Delete provisioned devices
 
         Delete provisioned devices based on query parameters.
@@ -8443,7 +8785,8 @@ def delete_dna_intent_api_v1_sda_provision_devices(self, network_device_id: Opti
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_provision_devices(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_provision_devices(self, content__type: Any) -> Dict[str, Any]:
         """Provision devices
 
         Provisions network devices to respective Sites based on user input.
@@ -8464,7 +8807,8 @@ def post_dna_intent_api_v1_sda_provision_devices(self, content__type: Any) -> Di
         url = self.base_url + '/dna/intent/api/v1/sda/provisionDevices'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_provision_devices(self, id: Optional[Any] = None, network_device_id: Optional[Any] = None, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_provision_devices(self, id: Optional[Any] = None, network_device_id: Optional[Any] = None, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get provisioned devices
 
         Returns the list of provisioned devices based on query parameters.
@@ -8494,7 +8838,8 @@ def get_dna_intent_api_v1_sda_provision_devices(self, id: Optional[Any] = None, 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_provision_devices(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_provision_devices(self, content__type: Any) -> Dict[str, Any]:
         """Re-provision devices
 
         Re-provisions network devices to the site based on the user input.
@@ -8515,7 +8860,8 @@ def put_dna_intent_api_v1_sda_provision_devices(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/intent/api/v1/sda/provisionDevices'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_port_channels_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_port_channels_id(self, id: Any) -> Dict[str, Any]:
         """Delete port channel by id
 
         Deletes a port channel based on id.
@@ -8535,7 +8881,8 @@ def delete_dna_intent_api_v1_sda_port_channels_id(self, id: Any) -> Dict[str, An
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_flow_analysis(self, periodic_refresh: Optional[Any] = None, source_i_p: Optional[Any] = None, dest_i_p: Optional[Any] = None, source_port: Optional[Any] = None, dest_port: Optional[Any] = None, gt_create_time: Optional[Any] = None, lt_create_time: Optional[Any] = None, protocol: Optional[Any] = None, status: Optional[Any] = None, task_id: Optional[Any] = None, last_update_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, order: Optional[Any] = None, sort_by: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_flow_analysis(self, periodic_refresh: Optional[Any] = None, source_i_p: Optional[Any] = None, dest_i_p: Optional[Any] = None, source_port: Optional[Any] = None, dest_port: Optional[Any] = None, gt_create_time: Optional[Any] = None, lt_create_time: Optional[Any] = None, protocol: Optional[Any] = None, status: Optional[Any] = None, task_id: Optional[Any] = None, last_update_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, order: Optional[Any] = None, sort_by: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves all previous Pathtraces summary
 
         Returns a summary of all flow analyses stored. Results can be filtered by specified parameters.
@@ -8585,7 +8932,8 @@ def get_dna_intent_api_v1_flow_analysis(self, periodic_refresh: Optional[Any] = 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_flow_analysis(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_flow_analysis(self, content__type: Any) -> Dict[str, Any]:
         """Initiate a new Pathtrace
 
         Initiates a new flow analysis with periodic refresh and stat collection options. Returns a request id and a task id to get results and follow progress.
@@ -8606,7 +8954,8 @@ def post_dna_intent_api_v1_flow_analysis(self, content__type: Any) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/flow-analysis'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_device_config_write_memory(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_device_config_write_memory(self, content__type: Any) -> Dict[str, Any]:
         """Commit device configuration
 
         This operation would commit device running configuration to startup by issuing "write memory" to device
@@ -8627,7 +8976,8 @@ def post_dna_intent_api_v1_network_device_config_write_memory(self, content__typ
         url = self.base_url + '/dna/intent/api/v1/network-device-config/write-memory'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_system_api_v1_role(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_system_api_v1_role(self, content__type: Any) -> Dict[str, Any]:
         """Update role API
 
         Update a role in Cisco DNA Center System.
@@ -8648,7 +8998,8 @@ def put_dna_system_api_v1_role(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/role'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_system_api_v1_role(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_system_api_v1_role(self, content__type: Any) -> Dict[str, Any]:
         """Add role API
 
         Add a new role in Cisco DNA Center System.
@@ -8669,7 +9020,8 @@ def post_dna_system_api_v1_role(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/role'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_insight_site_id_device_link(self, site_id: Any, category: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_insight_site_id_device_link(self, site_id: Any, category: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Inventory Insight Device Link Mismatch API
 
         Find all devices with link mismatch (speed /  vlan)
@@ -8701,7 +9053,8 @@ def get_dna_intent_api_v1_network_device_insight_site_id_device_link(self, site_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device_site_claim(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device_site_claim(self, content__type: Any) -> Dict[str, Any]:
         """Claim a Device to a Site
 
         Claim a device based on Catalyst Center Site-based design process. Some required parameters differ based on device platform:
@@ -8730,7 +9083,8 @@ CatalystWLC/MobilityExpress/EWC: staticIP, subnetMask, gateway. vlanId and ipInt
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device/site-claim'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_network_devices_id(self, id: Any, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_network_devices_id(self, id: Any, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Get the device data for the given device id (Uuid)
 
         Returns the device data for the given device Uuid in the specified start and end time range. When there is no start and end time specified returns the latest available data for the given Id. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -8764,7 +9118,8 @@ If `startTime` is not provided, API will default to current time.
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_lan_automation_log_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_lan_automation_log_id(self, id: Any) -> Dict[str, Any]:
         """LAN Automation Log by Id
 
         Invoke this API to get the LAN Automation session logs based on the given LAN Automation session id.
@@ -8784,7 +9139,8 @@ def get_dna_intent_api_v1_lan_automation_log_id(self, id: Any) -> Dict[str, Any]
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_device_credentials(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_device_credentials(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update device credential settings for a site.
 
         Updates device credential settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the credential is unset, and that no credential of that type will be used for the site.
@@ -8807,7 +9163,8 @@ def put_dna_intent_api_v1_sites_id_device_credentials(self, content__type: Any, 
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_device_credentials(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_device_credentials(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Get device credential settings for a site
 
         Gets device credential settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the credential is unset, and that no credential of that type will be used for the site.
@@ -8831,7 +9188,8 @@ def get_dna_intent_api_v1_sites_id_device_credentials(self, id: Any, inherited: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_discovery(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_discovery(self, content__type: Any) -> Dict[str, Any]:
         """Start discovery
 
         Initiates discovery with the given parameters
@@ -8852,7 +9210,8 @@ def post_dna_intent_api_v1_discovery(self, content__type: Any) -> Dict[str, Any]
         url = self.base_url + '/dna/intent/api/v1/discovery'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_discovery(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_discovery(self, content__type: Any) -> Dict[str, Any]:
         """Updates an existing discovery by specified Id
 
         Stops or starts an existing discovery
@@ -8873,7 +9232,8 @@ def put_dna_intent_api_v1_discovery(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/discovery'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_discovery(self) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_discovery(self) -> Dict[str, Any]:
         """Delete all discovery
 
         Stops all the discoveries and removes them
@@ -8889,7 +9249,8 @@ def delete_dna_intent_api_v1_discovery(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/discovery'
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_network_device_device_id_count(self, device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_network_device_device_id_count(self, device_id: Any) -> Dict[str, Any]:
         """Get Device Interface count
 
         Returns the interface count for the given device
@@ -8909,7 +9270,8 @@ def get_dna_intent_api_v1_interface_network_device_device_id_count(self, device_
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_dnac_release(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_dnac_release(self) -> Dict[str, Any]:
         """Cisco DNA Center Release Summary
 
         Provides information such as API version, mandatory core packages for installation or upgrade, optional packages, Cisco DNA Center name and version, supported direct updates, and tenant ID. 
@@ -8925,7 +9287,8 @@ def get_dna_intent_api_v1_dnac_release(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/dnac-release'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_image_importation_golden(self, accept: Optional[Any] = None, content__type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_image_importation_golden(self, accept: Optional[Any] = None, content__type: Optional[Any] = None) -> Dict[str, Any]:
         """Tag as Golden Image
 
         Golden Tag image. Set siteId as -1 for Global site.
@@ -8949,7 +9312,8 @@ def post_dna_intent_api_v1_image_importation_golden(self, accept: Optional[Any] 
         url = self.base_url + '/dna/intent/api/v1/image/importation/golden'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_layer2_virtual_networks_count(self, fabric_id: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, traffic_type: Optional[Any] = None, associated_layer3_virtual_network_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_layer2_virtual_networks_count(self, fabric_id: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None, traffic_type: Optional[Any] = None, associated_layer3_virtual_network_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get layer 2 virtual network count
 
         Returns the count of layer 2 virtual networks that match the provided query parameters.
@@ -8979,7 +9343,8 @@ def get_dna_intent_api_v1_sda_layer2_virtual_networks_count(self, fabric_id: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sites_device_credentials_apply(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sites_device_credentials_apply(self, content__type: Any) -> Dict[str, Any]:
         """Sync network devices credential
 
         When sync is triggered at a site with the credential that are associated to the same site, network devices in impacted sites (child sites which are inheriting the credential) get managed in inventory with the associated site credential. Credential gets configured on network devices before these get managed in inventory. Please make a note that cli credential wouldn't be configured on AAA authenticated devices but they just get managed with the associated site cli credential.
@@ -9000,7 +9365,8 @@ def post_dna_intent_api_v1_sites_device_credentials_apply(self, content__type: A
         url = self.base_url + '/dna/intent/api/v1/sites/deviceCredentials/apply'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_profiles_for_sites_count(self, type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_profiles_for_sites_count(self, type: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the count of network profiles for sites
 
         Retrieves the count of network profiles for sites
@@ -9022,7 +9388,8 @@ def get_dna_intent_api_v1_network_profiles_for_sites_count(self, type: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_clients_trend_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_clients_trend_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the Trend analytics data related to clients.
 
         Retrieves the trend analytics of client data for the specified time range. The data will be grouped based on the given trend time interval. This API facilitates obtaining consolidated insights into the performance and status of the clients over the specified start and end time. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -9047,7 +9414,8 @@ def post_dna_data_api_v1_clients_trend_analytics(self, content__type: Any, x__c_
         url = self.base_url + '/dna/data/api/v1/clients/trendAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_count(self, hostname: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, location_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_count(self, hostname: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, location_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Count
 
         Returns the count of network devices based on the filter criteria by management IP address, mac address, hostname and location name
@@ -9075,7 +9443,8 @@ def get_dna_intent_api_v1_network_device_count(self, hostname: Optional[Any] = N
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v2_sp_profile_sp_profile_name(self, sp_profile_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v2_sp_profile_sp_profile_name(self, sp_profile_name: Any) -> Dict[str, Any]:
         """Delete SP Profile V2
 
         API to delete Service Provider Profile (QoS).
@@ -9095,7 +9464,8 @@ def delete_dna_intent_api_v2_sp_profile_sp_profile_name(self, sp_profile_name: A
         url = url.format(sp_profile_name=sp_profile_name)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_maps_import_import_context_uuid_perform(self, content__type: Any, import_context_uuid: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_maps_import_import_context_uuid_perform(self, content__type: Any, import_context_uuid: Any) -> Dict[str, Any]:
         """Import Map Archive - Perform Import
 
         For a previously initatied import, approves the import to be performed, accepting that data loss may occur.  A Map import will fully replace existing Maps data for the site(s) defined in the archive. The Map Archive Import Status API /maps/import/${contextUuid}/status should always be checked to validate the pre-import validation output prior to performing the import.
@@ -9118,7 +9488,8 @@ def post_dna_intent_api_v1_maps_import_import_context_uuid_perform(self, content
         url = url.format(import_context_uuid=import_context_uuid)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_device_reboot_apreboot(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_device_reboot_apreboot(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
         """Reboot Access Points
 
         Users can reboot multiple access points up-to 200 at a time using this API
@@ -9139,7 +9510,8 @@ def post_dna_intent_api_v1_device_reboot_apreboot(self, content__type: Optional[
         url = self.base_url + '/dna/intent/api/v1/device-reboot/apreboot'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, content__type: Any) -> Dict[str, Any]:
         """Add fabric devices layer 2 handoffs
 
         Adds layer 2 handoffs in fabric devices based on user input.
@@ -9160,7 +9532,8 @@ def post_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, content__typ
         url = self.base_url + '/dna/intent/api/v1/sda/fabricDevices/layer2Handoffs'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, fabric_id: Any, network_device_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, fabric_id: Any, network_device_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices layer 2 handoffs
 
         Returns a list of layer 2 handoffs of fabric devices that match the provided query parameters.
@@ -9189,7 +9562,8 @@ def get_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, fabric_id: An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, fabric_id: Any, network_device_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, fabric_id: Any, network_device_id: Any) -> Dict[str, Any]:
         """Delete fabric device layer 2 handoffs
 
         Deletes layer 2 handoffs of a fabric device based on user input.
@@ -9213,7 +9587,8 @@ def delete_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs(self, fabric_id:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_subscription_syslog(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_subscription_syslog(self, content__type: Any) -> Dict[str, Any]:
         """Update Syslog Event Subscription
 
         Update Syslog Subscription Endpoint for list of registered events
@@ -9234,7 +9609,8 @@ def put_dna_intent_api_v1_event_subscription_syslog(self, content__type: Any) ->
         url = self.base_url + '/dna/intent/api/v1/event/subscription/syslog'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_subscription_syslog(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_subscription_syslog(self, content__type: Any) -> Dict[str, Any]:
         """Create Syslog Event Subscription
 
         Create Syslog Subscription Endpoint for list of registered events
@@ -9255,7 +9631,8 @@ def post_dna_intent_api_v1_event_subscription_syslog(self, content__type: Any) -
         url = self.base_url + '/dna/intent/api/v1/event/subscription/syslog'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription_syslog(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription_syslog(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Syslog Event Subscriptions
 
         Gets the list of Syslog Subscriptions's based on provided offset and limit
@@ -9295,7 +9672,8 @@ def get_dna_intent_api_v1_event_subscription_syslog(self, event_ids: Optional[An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_topology_vlan_vlan_names(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_topology_vlan_vlan_names(self) -> Dict[str, Any]:
         """Get VLAN details
 
         Returns the list of VLAN names that are involved in a loop as identified by the Spanning Tree Protocol
@@ -9311,7 +9689,8 @@ def get_dna_intent_api_v1_topology_vlan_vlan_names(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/topology/vlan/vlan-names'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups(self, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups(self, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get All MobilityGroups	
 
         Retrieve all configured mobility groups if no Network Device Id is provided as a query parameter. If a Network Device Id is given and a mobility group is configured for it, return the configured details; otherwise, return the default values from the device.
@@ -9333,7 +9712,8 @@ def get_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups(self, ne
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v2_global_credential_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v2_global_credential_id(self, id: Any) -> Dict[str, Any]:
         """Delete Global Credential V2
 
         Delete a global credential. Only 'id' of the credential has to be passed.
@@ -9353,7 +9733,8 @@ def delete_dna_intent_api_v2_global_credential_id(self, id: Any) -> Dict[str, An
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_tags_network_devices_members_associations_query(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_tags_network_devices_members_associations_query(self, content__type: Any) -> Dict[str, Any]:
         """Query the tags associated with network devices.
 
         Fetches the tags associated with the given network device `ids`. Devices that don't have any tags associated will not be included in the response. A tag is a user-defined or system-defined construct to group resources. When a device is tagged, it is called a member of the tag. `ids` can be fetched via `/dna/intent/api/v1/network-device` API.
@@ -9375,7 +9756,8 @@ def post_dna_intent_api_v1_tags_network_devices_members_associations_query(self,
         url = self.base_url + '/dna/intent/api/v1/tags/networkDevices/membersAssociations/query'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_site(self, group_name_hierarchy: Optional[Any] = None, id: Optional[Any] = None, type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_site(self, group_name_hierarchy: Optional[Any] = None, id: Optional[Any] = None, type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get Site V2
 
         API to get site(s) by site-name-hierarchy or siteId or type. List all sites if these parameters  are not given as an input.
@@ -9405,7 +9787,8 @@ def get_dna_intent_api_v2_site(self, group_name_hierarchy: Optional[Any] = None,
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostics_system_health(self, summary: Optional[Any] = None, domain: Optional[Any] = None, subdomain: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostics_system_health(self, summary: Optional[Any] = None, domain: Optional[Any] = None, subdomain: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """System Health API
 
         This API retrieves the latest system events 
@@ -9435,7 +9818,8 @@ def get_dna_intent_api_v1_diagnostics_system_health(self, summary: Optional[Any]
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_trusted_certificates_import(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_trusted_certificates_import(self, content__type: Any) -> Dict[str, Any]:
         """Import Trusted Certificate
 
         Imports trusted certificate into a truststore. Accepts .pem or .der file as input.
@@ -9456,7 +9840,8 @@ def post_dna_intent_api_v1_trusted_certificates_import(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/trustedCertificates/import'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_lan_automation_status_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_lan_automation_status_id(self, id: Any) -> Dict[str, Any]:
         """LAN Automation Status by Id
 
         Invoke this API to get the LAN Automation session status based on the given Lan Automation session id.
@@ -9476,7 +9861,8 @@ def get_dna_intent_api_v1_lan_automation_status_id(self, id: Any) -> Dict[str, A
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs_id(self, id: Any) -> Dict[str, Any]:
         """Delete fabric device layer 2 handoff by id
 
         Deletes a layer 2 handoff of a fabric device based on id.
@@ -9496,7 +9882,8 @@ def delete_dna_intent_api_v1_sda_fabric_devices_layer2_handoffs_id(self, id: Any
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_applications(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_applications(self, content__type: Any) -> Dict[str, Any]:
         """Edit Application/s
 
         Edit the attributes of an existing application
@@ -9517,7 +9904,8 @@ def put_dna_intent_api_v2_applications(self, content__type: Any) -> Dict[str, An
         url = self.base_url + '/dna/intent/api/v2/applications'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_applications(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_applications(self, content__type: Any) -> Dict[str, Any]:
         """Create Application/s
 
         Create new custom application/s
@@ -9538,7 +9926,8 @@ def post_dna_intent_api_v2_applications(self, content__type: Any) -> Dict[str, A
         url = self.base_url + '/dna/intent/api/v2/applications'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_applications(self, attributes: Any, offset: Any, limit: Any, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_applications(self, attributes: Any, offset: Any, limit: Any, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Application/s
 
         Get application/s by offset/limit or by name
@@ -9566,7 +9955,8 @@ def get_dna_intent_api_v2_applications(self, attributes: Any, offset: Any, limit
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_fabric_devices(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_fabric_devices(self, content__type: Any) -> Dict[str, Any]:
         """Add fabric devices
 
         Adds fabric devices based on user input.
@@ -9587,7 +9977,8 @@ def post_dna_intent_api_v1_sda_fabric_devices(self, content__type: Any) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/sda/fabricDevices'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_devices(self, fabric_id: Any, network_device_id: Optional[Any] = None, device_roles: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_devices(self, fabric_id: Any, network_device_id: Optional[Any] = None, device_roles: Optional[Any] = None) -> Dict[str, Any]:
         """Delete fabric devices
 
         Deletes fabric devices based on user input.
@@ -9613,7 +10004,8 @@ def delete_dna_intent_api_v1_sda_fabric_devices(self, fabric_id: Any, network_de
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_fabric_devices(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_fabric_devices(self, content__type: Any) -> Dict[str, Any]:
         """Update fabric devices
 
         Updates fabric devices based on user input.
@@ -9634,7 +10026,8 @@ def put_dna_intent_api_v1_sda_fabric_devices(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/sda/fabricDevices'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices(self, fabric_id: Any, network_device_id: Optional[Any] = None, device_roles: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices(self, fabric_id: Any, network_device_id: Optional[Any] = None, device_roles: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices
 
         Returns a list of fabric devices that match the provided query parameters.
@@ -9665,7 +10058,8 @@ def get_dna_intent_api_v1_sda_fabric_devices(self, fabric_id: Any, network_devic
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Update 802.11be Profile
 
         This API allows the user to update a 802.11be Profile
@@ -9688,7 +10082,8 @@ def put_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, content__t
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, id: Any) -> Dict[str, Any]:
         """Delete a 802.11be Profile
 
         This API allows the user to delete a 802.11be Profile,if the 802.11be Profile is not mapped to any Wireless Network Profile
@@ -9708,7 +10103,8 @@ def delete_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, id: Any
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, id: Any) -> Dict[str, Any]:
         """Get 802.11be Profile by ID
 
         This API allows the user to get 802.11be Profile by ID
@@ -9728,7 +10124,8 @@ def get_dna_intent_api_v1_wireless_settings_dot11be_profiles_id(self, id: Any) -
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_bulk(self, content__type: Any, profile_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_bulk(self, content__type: Any, profile_id: Any) -> Dict[str, Any]:
         """Assign a network profile for sites to a list of sites
 
         Assign a network profile for sites to a list of sites. Also assigns the profile to child sites.
@@ -9751,7 +10148,8 @@ def post_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignment
         url = url.format(profile_id=profile_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_bulk(self, profile_id: Any, site_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_bulk(self, profile_id: Any, site_id: Any) -> Dict[str, Any]:
         """Unassigns a network profile for sites from multiple sites
 
         Unassigns a given network profile for sites from multiple sites. The profile must be removed from the containing building first if this site is a floor.
@@ -9775,7 +10173,8 @@ def delete_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignme
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tasks_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, parent_id: Optional[Any] = None, root_id: Optional[Any] = None, status: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tasks_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, parent_id: Optional[Any] = None, root_id: Optional[Any] = None, status: Optional[Any] = None) -> Dict[str, Any]:
         """Get tasks count
 
         Returns the number of tasks that meet the filter criteria
@@ -9805,7 +10204,8 @@ def get_dna_intent_api_v1_tasks_count(self, start_time: Optional[Any] = None, en
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v2_floors_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v2_floors_id(self, id: Any) -> Dict[str, Any]:
         """Deletes a floor
 
         Deletes a floor from the network hierarchy. This operations fails if there are any devices assigned to this floor.
@@ -9825,7 +10225,8 @@ def delete_dna_intent_api_v2_floors_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_floors_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_floors_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Updates a floor
 
         Updates a floor in the network hierarchy.
@@ -9848,7 +10249,8 @@ def put_dna_intent_api_v2_floors_id(self, content__type: Any, id: Any) -> Dict[s
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_floors_id(self, id: Any, units_of_measure: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_floors_id(self, id: Any, units_of_measure: Optional[Any] = None) -> Dict[str, Any]:
         """Gets a floor
 
         Gets a floor in the network hierarchy.
@@ -9872,7 +10274,8 @@ def get_dna_intent_api_v2_floors_id(self, id: Any, units_of_measure: Optional[An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_system_api_v1_user(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_system_api_v1_user(self, content__type: Any) -> Dict[str, Any]:
         """Add user API
 
         Add a new user for Cisco DNA Center System.
@@ -9893,7 +10296,8 @@ def post_dna_system_api_v1_user(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/user'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_user(self, invoke_source: Any, auth_source: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_user(self, invoke_source: Any, auth_source: Optional[Any] = None) -> Dict[str, Any]:
         """Get users API
 
         Get all users for the Cisco DNA Center System.
@@ -9917,7 +10321,8 @@ def get_dna_system_api_v1_user(self, invoke_source: Any, auth_source: Optional[A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_system_api_v1_user(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_system_api_v1_user(self, content__type: Any) -> Dict[str, Any]:
         """Update user API
 
         Update a user for Cisco DNA Center System.
@@ -9938,7 +10343,8 @@ def put_dna_system_api_v1_user(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/user'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_fabric_zones(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_fabric_zones(self, content__type: Any) -> Dict[str, Any]:
         """Add fabric zone
 
         Adds a fabric zone based on user input.
@@ -9959,7 +10365,8 @@ def post_dna_intent_api_v1_sda_fabric_zones(self, content__type: Any) -> Dict[st
         url = self.base_url + '/dna/intent/api/v1/sda/fabricZones'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_zones(self, id: Optional[Any] = None, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_zones(self, id: Optional[Any] = None, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric zones
 
         Returns a list of fabric zones that match the provided query parameters.
@@ -9987,7 +10394,8 @@ def get_dna_intent_api_v1_sda_fabric_zones(self, id: Optional[Any] = None, site_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_fabric_zones(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_fabric_zones(self, content__type: Any) -> Dict[str, Any]:
         """Update fabric zone
 
         Updates a fabric zone based on user input.
@@ -10008,7 +10416,8 @@ def put_dna_intent_api_v1_sda_fabric_zones(self, content__type: Any) -> Dict[str
         url = self.base_url + '/dna/intent/api/v1/sda/fabricZones'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_wireless_accesspoint_configuration(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_wireless_accesspoint_configuration(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
         """Configure Access Points V2
 
         User can configure multiple access points with required options using this intent API
@@ -10029,7 +10438,8 @@ def post_dna_intent_api_v2_wireless_accesspoint_configuration(self, content__typ
         url = self.base_url + '/dna/intent/api/v2/wireless/accesspoint-configuration'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_settings_sacct_domain_vacct(self, domain: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_settings_sacct_domain_vacct(self, domain: Any) -> Dict[str, Any]:
         """Get Virtual Account List
 
         Returns list of virtual accounts associated with the specified smart account
@@ -10049,7 +10459,8 @@ def get_dna_intent_api_v1_onboarding_pnp_settings_sacct_domain_vacct(self, domai
         url = url.format(domain=domain)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_global_credential_id(self, content__type: Any, global_credential_id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_global_credential_id(self, content__type: Any, global_credential_id: Any) -> Dict[str, Any]:
         """Update global credentials
 
         Update global credential for network devices in site(s)
@@ -10072,7 +10483,8 @@ def put_dna_intent_api_v1_global_credential_global_credential_id(self, content__
         url = url.format(global_credential_id=global_credential_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_global_credential_global_credential_id(self, global_credential_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_global_credential_global_credential_id(self, global_credential_id: Any) -> Dict[str, Any]:
         """Delete global credentials by Id
 
         Deletes global credential for the given ID
@@ -10092,7 +10504,8 @@ def delete_dna_intent_api_v1_global_credential_global_credential_id(self, global
         url = url.format(global_credential_id=global_credential_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_floors_floor_id_planned_access_points_planned_access_point_uuid(self, floor_id: Any, planned_access_point_uuid: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_floors_floor_id_planned_access_points_planned_access_point_uuid(self, floor_id: Any, planned_access_point_uuid: Any) -> Dict[str, Any]:
         """Delete Planned Access Point for Floor
 
         Allow to delete a planned access point from an existing floor map including its planned radio and antenna details.  Use the Get variant of this API to fetch the existing planned access points for the floor.  The instanceUUID listed in each of the planned access point attributes acts as the path param input to this API to delete that specific instance.
@@ -10113,7 +10526,8 @@ def delete_dna_intent_api_v1_floors_floor_id_planned_access_points_planned_acces
         url = url.format(floor_id=floor_id, planned_access_point_uuid=planned_access_point_uuid)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_project_name_exportprojects(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_project_name_exportprojects(self, content__type: Any) -> Dict[str, Any]:
         """Exports the projects for a given criteria.
 
         Exports the projects for given projectNames.
@@ -10134,7 +10548,8 @@ def post_dna_intent_api_v1_template_programmer_project_name_exportprojects(self,
         url = self.base_url + '/dna/intent/api/v1/template-programmer/project/name/exportprojects'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_qos_device_interface_info_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_qos_device_interface_info_count(self) -> Dict[str, Any]:
         """Get Qos Device Interface Info Count
 
         Get the number of all existing qos device interface infos group by network device id
@@ -10150,7 +10565,8 @@ def get_dna_intent_api_v1_qos_device_interface_info_count(self) -> Dict[str, Any
         url = self.base_url + '/dna/intent/api/v1/qos-device-interface-info-count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_events_count(self, tags: Any, event_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_events_count(self, tags: Any, event_id: Optional[Any] = None) -> Dict[str, Any]:
         """Count of Events
 
         Get the count of registered events with provided eventIds or tags as mandatory
@@ -10174,7 +10590,8 @@ def get_dna_intent_api_v1_events_count(self, tags: Any, event_id: Optional[Any] 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_ospf(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_ospf(self) -> Dict[str, Any]:
         """Get OSPF interfaces
 
         Returns the interfaces that has OSPF enabled
@@ -10190,7 +10607,8 @@ def get_dna_intent_api_v1_interface_ospf(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/interface/ospf'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_image_updates(self, id: Optional[Any] = None, parent_id: Optional[Any] = None, network_device_id: Optional[Any] = None, status: Optional[Any] = None, image_name: Optional[Any] = None, host_name: Optional[Any] = None, management_address: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_image_updates(self, id: Optional[Any] = None, parent_id: Optional[Any] = None, network_device_id: Optional[Any] = None, status: Optional[Any] = None, image_name: Optional[Any] = None, host_name: Optional[Any] = None, management_address: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get network device image updates
 
         Returns the list of network device image updates based on the given filter criteria
@@ -10236,7 +10654,8 @@ def get_dna_intent_api_v1_network_device_image_updates(self, id: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_mobility_provision(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_mobility_provision(self, content__type: Any) -> Dict[str, Any]:
         """Mobility Provision
 
         This API is used to provision/deploy wireless mobility into Cisco wireless controllers.
@@ -10257,7 +10676,8 @@ def post_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_mobilit
         url = self.base_url + '/dna/intent/api/v1/wirelessControllers/wirelessMobilityGroups/mobilityProvision'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_devices_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_devices_id(self, id: Any) -> Dict[str, Any]:
         """Delete fabric device by id
 
         Deletes a fabric device based on id.
@@ -10277,7 +10697,8 @@ def delete_dna_intent_api_v1_sda_fabric_devices_id(self, id: Any) -> Dict[str, A
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_buildings(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_buildings(self, content__type: Any) -> Dict[str, Any]:
         """Creates a building
 
         Creates a building in the network hierarchy under area.
@@ -10298,7 +10719,8 @@ def post_dna_intent_api_v2_buildings(self, content__type: Any) -> Dict[str, Any]
         url = self.base_url + '/dna/intent/api/v2/buildings'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_transit_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_transit_networks(self, content__type: Any) -> Dict[str, Any]:
         """Update transit networks
 
         Updates transit networks based on user input.
@@ -10319,7 +10741,8 @@ def put_dna_intent_api_v1_sda_transit_networks(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/intent/api/v1/sda/transitNetworks'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_transit_networks(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_transit_networks(self, content__type: Any) -> Dict[str, Any]:
         """Add transit networks
 
         Adds transit networks based on user input.
@@ -10340,7 +10763,8 @@ def post_dna_intent_api_v1_sda_transit_networks(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/intent/api/v1/sda/transitNetworks'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_transit_networks(self, id: Optional[Any] = None, name: Optional[Any] = None, type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_transit_networks(self, id: Optional[Any] = None, name: Optional[Any] = None, type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get transit networks
 
         Returns a list of transit networks that match the provided query parameters.
@@ -10370,7 +10794,8 @@ def get_dna_intent_api_v1_sda_transit_networks(self, id: Optional[Any] = None, n
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_id_stack(self, device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_id_stack(self, device_id: Any) -> Dict[str, Any]:
         """Get Stack Details for Device
 
         Retrieves complete stack details for given device ID
@@ -10390,7 +10815,8 @@ def get_dna_intent_api_v1_network_device_device_id_stack(self, device_id: Any) -
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_network_devices_device_id_interfaces_query(self, content__type: Any, device_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_network_devices_device_id_interfaces_query(self, content__type: Any, device_id: Any) -> Dict[str, Any]:
         """Get Device Interface Stats Info
 
         This API returns the Interface Stats for the given Device Id. Please refer to the Feature tab for the Request Body usage and the API filtering support.
@@ -10413,7 +10839,8 @@ def post_dna_intent_api_v2_network_devices_device_id_interfaces_query(self, cont
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_application_policy_application_set_count(self, scalable_group_type: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_application_policy_application_set_count(self, scalable_group_type: Any) -> Dict[str, Any]:
         """Get Application Set Count
 
         Get the number of all existing application sets
@@ -10435,7 +10862,8 @@ def get_dna_intent_api_v2_application_policy_application_set_count(self, scalabl
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_workflow_count(self, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_workflow_count(self, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Workflow Count
 
         Returns the workflow count
@@ -10457,7 +10885,8 @@ def get_dna_intent_api_v1_onboarding_pnp_workflow_count(self, name: Optional[Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_zones_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_zones_id(self, id: Any) -> Dict[str, Any]:
         """Delete fabric zone by id
 
         Deletes a fabric zone based on id.
@@ -10477,7 +10906,8 @@ def delete_dna_intent_api_v1_sda_fabric_zones_id(self, id: Any) -> Dict[str, Any
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_compliance_device_uuid(self, device_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_compliance_device_uuid(self, device_uuid: Any) -> Dict[str, Any]:
         """Device Compliance Status
 
         Return compliance status of a device.
@@ -10497,7 +10927,8 @@ def get_dna_intent_api_v1_compliance_device_uuid(self, device_uuid: Any) -> Dict
         url = url.format(device_uuid=device_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_flow_analysis_flow_analysis_id(self, flow_analysis_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_flow_analysis_flow_analysis_id(self, flow_analysis_id: Any) -> Dict[str, Any]:
         """Retrieves previous Pathtrace
 
         Returns result of a previously requested flow analysis by its Flow Analysis id
@@ -10517,7 +10948,8 @@ def get_dna_intent_api_v1_flow_analysis_flow_analysis_id(self, flow_analysis_id:
         url = url.format(flow_analysis_id=flow_analysis_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_flow_analysis_flow_analysis_id(self, flow_analysis_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_flow_analysis_flow_analysis_id(self, flow_analysis_id: Any) -> Dict[str, Any]:
         """Deletes Pathtrace by Id
 
         Deletes a flow analysis request by its id
@@ -10537,7 +10969,8 @@ def delete_dna_intent_api_v1_flow_analysis_flow_analysis_id(self, flow_analysis_
         url = url.format(flow_analysis_id=flow_analysis_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_health(self, timestamp: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_health(self, timestamp: Optional[Any] = None) -> Dict[str, Any]:
         """Get Overall Network Health
 
         Returns Overall Network Health information by Device category (Access, Distribution, Core, Router, Wireless) for any given point of time
@@ -10559,7 +10992,8 @@ def get_dna_intent_api_v1_network_health(self, timestamp: Optional[Any] = None) 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_compliance_network_devices_id_issues_remediation_provision(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_compliance_network_devices_id_issues_remediation_provision(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Compliance Remediation
 
         Remediates configuration compliance issues. Compliance issues related to 'Routing', 'HA Remediation', 'Software Image', 'Securities Advisories', 'SD-Access Unsupported Configuration', 'Workflow', etc. will not be addressed by this API.
@@ -10584,7 +11018,8 @@ Warning: Fixing compliance mismatches could result in a possible network flap.
         url = url.format(id=id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_network_device_user_defined_field_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_network_device_user_defined_field_id(self, id: Any) -> Dict[str, Any]:
         """Delete User-Defined-Field
 
         Deletes an existing Global User-Defined-Field using it's id.
@@ -10604,7 +11039,8 @@ def delete_dna_intent_api_v1_network_device_user_defined_field_id(self, id: Any)
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_device_user_defined_field_id(self, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_device_user_defined_field_id(self, id: Any) -> Dict[str, Any]:
         """Update User-Defined-Field
 
         Updates an existing global User Defined Field, using it's id.
@@ -10624,7 +11060,8 @@ def put_dna_intent_api_v1_network_device_user_defined_field_id(self, id: Any) ->
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_settings(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_settings(self) -> Dict[str, Any]:
         """Get PnP global settings
 
         Returns global PnP settings of the user
@@ -10640,7 +11077,8 @@ def get_dna_intent_api_v1_onboarding_pnp_settings(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-settings'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_onboarding_pnp_settings(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_onboarding_pnp_settings(self, content__type: Any) -> Dict[str, Any]:
         """Update PnP global settings
 
         Updates the user's list of global PnP settings
@@ -10661,7 +11099,8 @@ def put_dna_intent_api_v1_onboarding_pnp_settings(self, content__type: Any) -> D
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-settings'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
         """Update SP Profile V2
 
         API to update Service Provider Profile (QoS).
@@ -10677,7 +11116,8 @@ def put_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/service-provider'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
         """Create SP Profile V2
 
         API to create Service Provider Profile(QOS).
@@ -10693,7 +11133,8 @@ def post_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/service-provider'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
         """Get Service Provider Details V2
 
         API to get Service Provider details (QoS).
@@ -10709,7 +11150,8 @@ def get_dna_intent_api_v2_service_provider(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/service-provider'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_profiles(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_profiles(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get Wireless Profiles
 
         This API allows the user to get all Wireless Network Profiles
@@ -10733,7 +11175,8 @@ def get_dna_intent_api_v1_wireless_profiles(self, limit: Optional[Any] = None, o
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_profiles(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_profiles(self, content__type: Any) -> Dict[str, Any]:
         """Create Wireless Profile
 
         This API allows the user to create a Wireless Network Profile
@@ -10754,7 +11197,8 @@ def post_dna_intent_api_v1_wireless_profiles(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/wirelessProfiles'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_config_task(self, parent_task_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_config_task(self, parent_task_id: Any) -> Dict[str, Any]:
         """Get config task details
 
         Returns a config task result details by specified id
@@ -10776,7 +11220,8 @@ def get_dna_intent_api_v1_network_device_config_task(self, parent_task_id: Any) 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tags_network_devices_members_associations_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tags_network_devices_members_associations_count(self) -> Dict[str, Any]:
         """Retrieve the count of network devices that are associated with at least one tag.
 
         Fetches the count of network devices that are associated with at least one tag. A tag is a user-defined or system-defined construct to group resources. When a device is tagged, it is called a member of the tag.
@@ -10792,7 +11237,8 @@ def get_dna_intent_api_v1_tags_network_devices_members_associations_count(self) 
         url = self.base_url + '/dna/intent/api/v1/tags/networkDevices/membersAssociations/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_multicast_virtual_networks_count(self, fabric_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_multicast_virtual_networks_count(self, fabric_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get multicast virtual network count
 
         Returns the count of multicast configurations associated to virtual networks that match the provided query parameters.
@@ -10814,7 +11260,8 @@ def get_dna_intent_api_v1_sda_multicast_virtual_networks_count(self, fabric_id: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tag_count(self, name: Optional[Any] = None, name_space: Optional[Any] = None, attribute_name: Optional[Any] = None, size: Optional[Any] = None, system_tag: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tag_count(self, name: Optional[Any] = None, name_space: Optional[Any] = None, attribute_name: Optional[Any] = None, size: Optional[Any] = None, system_tag: Optional[Any] = None) -> Dict[str, Any]:
         """Get Tag Count
 
         Returns tag count
@@ -10844,7 +11291,8 @@ def get_dna_intent_api_v1_tag_count(self, name: Optional[Any] = None, name_space
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_id_brief(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_id_brief(self, id: Any) -> Dict[str, Any]:
         """Get Device Summary
 
         Returns brief summary of device info such as hostname, management IP address for the given device Id
@@ -10864,7 +11312,8 @@ def get_dna_intent_api_v1_network_device_id_brief(self, id: Any) -> Dict[str, An
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_authentication_profiles(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_authentication_profiles(self, content__type: Any) -> Dict[str, Any]:
         """Update authentication profile
 
         Updates an authentication profile based on user input.
@@ -10885,7 +11334,8 @@ def put_dna_intent_api_v1_sda_authentication_profiles(self, content__type: Any) 
         url = self.base_url + '/dna/intent/api/v1/sda/authenticationProfiles'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_authentication_profiles(self, fabric_id: Optional[Any] = None, authentication_profile_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_authentication_profiles(self, fabric_id: Optional[Any] = None, authentication_profile_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get authentication profiles
 
         Returns a list of authentication profiles that match the provided query parameters.
@@ -10913,7 +11363,8 @@ def get_dna_intent_api_v1_sda_authentication_profiles(self, fabric_id: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_flexible_report_schedules(self, content__type: Any) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_flexible_report_schedules(self, content__type: Any) -> Dict[str, Any]:
         """Get all flexible report schedules
 
         Get all flexible report schedules
@@ -10934,7 +11385,8 @@ def get_dna_data_api_v1_flexible_report_schedules(self, content__type: Any) -> D
         url = self.base_url + '/dna/data/api/v1/flexible-report/schedules'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_licenses_smart_account_smart_account_id_virtual_accounts(self, smart_account_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_licenses_smart_account_smart_account_id_virtual_accounts(self, smart_account_id: Any) -> Dict[str, Any]:
         """Virtual Account Details
 
         Get virtual account details of a smart account.
@@ -10954,7 +11406,8 @@ def get_dna_intent_api_v1_licenses_smart_account_smart_account_id_virtual_accoun
         url = url.format(smart_account_id=smart_account_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_functional_capability_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_functional_capability_id(self, id: Any) -> Dict[str, Any]:
         """Get Functional Capability by Id
 
         Returns functional capability with given Id
@@ -10974,7 +11427,8 @@ def get_dna_intent_api_v1_network_device_functional_capability_id(self, id: Any)
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_fabric_sites(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_fabric_sites(self, content__type: Any) -> Dict[str, Any]:
         """Add fabric site
 
         Adds a fabric site based on user input.
@@ -10995,7 +11449,8 @@ def post_dna_intent_api_v1_sda_fabric_sites(self, content__type: Any) -> Dict[st
         url = self.base_url + '/dna/intent/api/v1/sda/fabricSites'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_sites(self, id: Optional[Any] = None, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_sites(self, id: Optional[Any] = None, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric sites
 
         Returns a list of fabric sites that match the provided query parameters.
@@ -11023,7 +11478,8 @@ def get_dna_intent_api_v1_sda_fabric_sites(self, id: Optional[Any] = None, site_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_fabric_sites(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_fabric_sites(self, content__type: Any) -> Dict[str, Any]:
         """Update fabric site
 
         Updates a fabric site based on user input.
@@ -11044,7 +11500,8 @@ def put_dna_intent_api_v1_sda_fabric_sites(self, content__type: Any) -> Dict[str
         url = self.base_url + '/dna/intent/api/v1/sda/fabricSites'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_workflow(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_workflow(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
         """Add a Workflow
 
         Adds a PnP Workflow along with the relevant tasks in the workflow into the PnP database
@@ -11065,7 +11522,8 @@ def post_dna_intent_api_v1_onboarding_pnp_workflow(self, content__type: Optional
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-workflow'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_workflow(self, limit: Optional[Any] = None, offset: Optional[Any] = None, sort: Optional[Any] = None, sort_order: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_workflow(self, limit: Optional[Any] = None, offset: Optional[Any] = None, sort: Optional[Any] = None, sort_order: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Workflows
 
         Returns the list of workflows based on filter criteria. If a limit is not specified, it will default to return 50 workflows. Pagination and sorting are also supported by this endpoint
@@ -11097,7 +11555,8 @@ def get_dna_intent_api_v1_onboarding_pnp_workflow(self, limit: Optional[Any] = N
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_network_device_id_config(self, network_device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_network_device_id_config(self, network_device_id: Any) -> Dict[str, Any]:
         """Get Device Config by Id
 
         Returns the device config by specified device ID
@@ -11117,7 +11576,8 @@ def get_dna_intent_api_v1_network_device_network_device_id_config(self, network_
         url = url.format(network_device_id=network_device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_clients_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_clients_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves specific client information matching the MAC address.
 
         Retrieves specific client information matching the MAC address. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -11166,7 +11626,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_id_meraki_organization(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_id_meraki_organization(self, id: Any) -> Dict[str, Any]:
         """Get Organization list for Meraki
 
         Returns list of organizations for meraki dashboard
@@ -11186,7 +11647,8 @@ def get_dna_intent_api_v1_network_device_id_meraki_organization(self, id: Any) -
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_id_collection_schedule(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_id_collection_schedule(self, id: Any) -> Dict[str, Any]:
         """Get Polling Interval by Id
 
         Returns polling interval by device id
@@ -11206,7 +11668,8 @@ def get_dna_intent_api_v1_network_device_id_collection_schedule(self, id: Any) -
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_tags_interfaces_members_associations_query(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_tags_interfaces_members_associations_query(self, content__type: Any) -> Dict[str, Any]:
         """Query the tags associated with interfaces.
 
         Fetches the tags associated with the given interface `ids`. Interfaces that don't have any tags associated will not be included in the response. A tag is a user-defined or system-defined construct to group resources. When an interface is tagged, it is called a member of the tag. `ids` can be fetched via `/dna/intent/api/v1/interface` API.
@@ -11228,7 +11691,8 @@ def post_dna_intent_api_v1_tags_interfaces_members_associations_query(self, cont
         url = self.base_url + '/dna/intent/api/v1/tags/interfaces/membersAssociations/query'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_event_series(self, event_ids: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, tags: Optional[Any] = None, namespace: Optional[Any] = None, site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_event_series(self, event_ids: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, tags: Optional[Any] = None, namespace: Optional[Any] = None, site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Notifications
 
         Get the list of Published Notifications
@@ -11280,7 +11744,8 @@ def get_dna_intent_api_v1_event_event_series(self, event_ids: Optional[Any] = No
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_assurance_issues_id(self, id: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_assurance_issues_id(self, id: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Get all the details and suggested actions of an issue for the given issue id
 
          Returns all the details and suggested actions of an issue for the given issue id. https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -11321,7 +11786,8 @@ Examples: `attribute=deviceType` (single attribute requested) `attribute=deviceT
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_interface_uuid_legit_operation(self, interface_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_interface_uuid_legit_operation(self, interface_uuid: Any) -> Dict[str, Any]:
         """Legit operations for interface
 
         Get list of all properties & operations valid for an interface.
@@ -11341,7 +11807,8 @@ def get_dna_intent_api_v1_interface_interface_uuid_legit_operation(self, interfa
         url = url.format(interface_uuid=interface_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_floors(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_floors(self, content__type: Any) -> Dict[str, Any]:
         """Creates a floor
 
         Create a floor in the network hierarchy under building.
@@ -11362,7 +11829,8 @@ def post_dna_intent_api_v2_floors(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v2/floors'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_interface_interface_uuid(self, content__type: Any, interface_uuid: Any, deployment_mode: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_interface_interface_uuid(self, content__type: Any, interface_uuid: Any, deployment_mode: Optional[Any] = None) -> Dict[str, Any]:
         """Update Interface details
 
         Add/Update Interface description, VLAN membership, Voice VLAN and change Interface admin status ('UP'/'DOWN') from Request body.
@@ -11389,7 +11857,8 @@ def put_dna_intent_api_v1_interface_interface_uuid(self, content__type: Any, int
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_system_api_v1_user_user_id(self, user_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_system_api_v1_user_user_id(self, user_id: Any) -> Dict[str, Any]:
         """Delete user API
 
         Delete a user from Cisco DNA Center System.
@@ -11409,7 +11878,8 @@ def delete_dna_system_api_v1_user_user_id(self, user_id: Any) -> Dict[str, Any]:
         url = url.format(user_id=user_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_config_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_config_count(self) -> Dict[str, Any]:
         """Get Device Config Count
 
         Returns the count of device configs
@@ -11425,7 +11895,8 @@ def get_dna_intent_api_v1_network_device_config_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/network-device/config/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_isis(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_isis(self) -> Dict[str, Any]:
         """Get ISIS interfaces
 
         Returns the interfaces that has ISIS enabled
@@ -11441,7 +11912,8 @@ def get_dna_intent_api_v1_interface_isis(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/interface/isis'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_profiles_for_sites_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_profiles_for_sites_id(self, id: Any) -> Dict[str, Any]:
         """Retrieve a network profile for sites by id
 
         Retrieves a network profile for sites by id.
@@ -11461,7 +11933,8 @@ def get_dna_intent_api_v1_network_profiles_for_sites_id(self, id: Any) -> Dict[s
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_network_profiles_for_sites_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_network_profiles_for_sites_id(self, id: Any) -> Dict[str, Any]:
         """Deletes a network profile for sites
 
         Deletes a network profile for sites.
@@ -11481,7 +11954,8 @@ def delete_dna_intent_api_v1_network_profiles_for_sites_id(self, id: Any) -> Dic
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_event_event_series_audit_logs(self, parent_instance_id: Optional[Any] = None, instance_id: Optional[Any] = None, name: Optional[Any] = None, event_id: Optional[Any] = None, category: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, user_id: Optional[Any] = None, context: Optional[Any] = None, event_hierarchy: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, is_system_events: Optional[Any] = None, description: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_event_event_series_audit_logs(self, parent_instance_id: Optional[Any] = None, instance_id: Optional[Any] = None, name: Optional[Any] = None, event_id: Optional[Any] = None, category: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, user_id: Optional[Any] = None, context: Optional[Any] = None, event_hierarchy: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, is_system_events: Optional[Any] = None, description: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get AuditLog Records
 
         Get Audit Log Event instances from the Event-Hub 
@@ -11545,7 +12019,8 @@ def get_dna_data_api_v1_event_event_series_audit_logs(self, parent_instance_id: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_http_read(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_http_read(self, content__type: Any) -> Dict[str, Any]:
         """Update HTTP read credential
 
         Updates global HTTP Read credential
@@ -11566,7 +12041,8 @@ def put_dna_intent_api_v1_global_credential_http_read(self, content__type: Any) 
         url = self.base_url + '/dna/intent/api/v1/global-credential/http-read'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_credential_http_read(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_credential_http_read(self, content__type: Any) -> Dict[str, Any]:
         """Create HTTP read credentials
 
         Adds HTTP read credentials
@@ -11587,7 +12063,8 @@ def post_dna_intent_api_v1_global_credential_http_read(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/global-credential/http-read'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostics_system_performance_history(self, kpi: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostics_system_performance_history(self, kpi: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
         """System Performance Historical API
 
         Retrieves the average values of cluster key performance indicators (KPIs), like CPU utilization, memory utilization or network rates grouped by time intervals within a specified time range. The data will be available from the past 24 hours.
@@ -11613,7 +12090,8 @@ def get_dna_intent_api_v1_diagnostics_system_performance_history(self, kpi: Opti
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_uuid_supervisor_card(self, device_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_uuid_supervisor_card(self, device_uuid: Any) -> Dict[str, Any]:
         """Get Supervisor card detail
 
         Get supervisor card detail for a given deviceuuid. Response will contain serial no, part no, switch no and slot no.
@@ -11633,7 +12111,8 @@ def get_dna_intent_api_v1_network_device_device_uuid_supervisor_card(self, devic
         url = url.format(device_uuid=device_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_image_distribution_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_image_distribution_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set image distribution settings for a site
 
         Set image distribution settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the settings is unset.
@@ -11656,7 +12135,8 @@ def put_dna_intent_api_v1_sites_id_image_distribution_settings(self, content__ty
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_image_distribution_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_image_distribution_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve image distribution settings for a site
 
         Retrieve image distribution settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the setting is unset at a site.
@@ -11680,7 +12160,8 @@ def get_dna_intent_api_v1_sites_id_image_distribution_settings(self, id: Any, in
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_network_device_id_ssid_details(self, network_device_id: Any, ssid_name: Optional[Any] = None, admin_status: Optional[Any] = None, managed: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_network_device_id_ssid_details(self, network_device_id: Any, ssid_name: Optional[Any] = None, admin_status: Optional[Any] = None, managed: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get SSID Details for specific Wireless Controller
 
         Retrieves all details of SSIDs associated with the specific Wireless Controller.
@@ -11712,7 +12193,8 @@ def get_dna_intent_api_v1_wireless_controllers_network_device_id_ssid_details(se
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_template_programmer_template_template_id(self, template_id: Any, latest_version: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_template_programmer_template_template_id(self, template_id: Any, latest_version: Optional[Any] = None) -> Dict[str, Any]:
         """Gets details of a given template
 
         Details of the template by its id
@@ -11736,7 +12218,8 @@ def get_dna_intent_api_v1_template_programmer_template_template_id(self, templat
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_template_programmer_template_template_id(self, template_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_template_programmer_template_template_id(self, template_id: Any) -> Dict[str, Any]:
         """Deletes the template
 
         Deletes the template by its id
@@ -11756,7 +12239,8 @@ def delete_dna_intent_api_v1_template_programmer_template_template_id(self, temp
         url = url.format(template_id=template_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_licenses_smart_account_virtual_account_deregister(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_licenses_smart_account_virtual_account_deregister(self, content__type: Optional[Any] = None) -> Dict[str, Any]:
         """Device Deregistration
 
         Deregister device(s) from CSSM(Cisco Smart Software Manager).
@@ -11777,7 +12261,8 @@ def put_dna_intent_api_v1_licenses_smart_account_virtual_account_deregister(self
         url = self.base_url + '/dna/intent/api/v1/licenses/smartAccount/virtualAccount/deregister'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_custom_issue_definitions_id(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_custom_issue_definitions_id(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Updates an existing custom issue definition based on the provided Id.
 
         Updates an existing custom issue definition based on the provided Id. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceUserDefinedIssueAPIs-1.0.0-resolved.yaml
@@ -11803,7 +12288,8 @@ def put_dna_intent_api_v1_custom_issue_definitions_id(self, content__type: Any, 
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_custom_issue_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_custom_issue_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Deletes an existing custom issue definition.
 
         Deletes an existing custom issue definition based on the Id. Only the Global profile issue has the access to delete the issue definition, so no profile id is required. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceUserDefinedIssueAPIs-1.0.0-resolved.yaml
@@ -11826,7 +12312,8 @@ def delete_dna_intent_api_v1_custom_issue_definitions_id(self, id: Any, x__c_a_l
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_event_artifact(self, event_ids: Optional[Any] = None, tags: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, search: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_event_artifact(self, event_ids: Optional[Any] = None, tags: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, search: Optional[Any] = None) -> Dict[str, Any]:
         """Get EventArtifacts
 
         Gets the list of artifacts based on provided offset and limit
@@ -11860,7 +12347,8 @@ def get_dna_system_api_v1_event_artifact(self, event_ids: Optional[Any] = None, 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_template_programmer_project_project_id(self, project_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_template_programmer_project_project_id(self, project_id: Any) -> Dict[str, Any]:
         """Deletes the project
 
         Deletes the project by its id
@@ -11880,7 +12368,8 @@ def delete_dna_intent_api_v1_template_programmer_project_project_id(self, projec
         url = url.format(project_id=project_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_template_programmer_project_project_id(self, project_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_template_programmer_project_project_id(self, project_id: Any) -> Dict[str, Any]:
         """Gets the details of a given project.
 
         Get the details of the given project by its id.
@@ -11900,7 +12389,8 @@ def get_dna_intent_api_v1_template_programmer_project_project_id(self, project_i
         url = url.format(project_id=project_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_id(self, profile_id: Any, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignments_id(self, profile_id: Any, id: Any) -> Dict[str, Any]:
         """Unassigns a network profile for sites from a site
 
         Unassigns a given network profile for sites from a site. The profile must be removed from parent sites first, otherwise this operation will not ulimately  unassign the profile.
@@ -11921,7 +12411,8 @@ def delete_dna_intent_api_v1_network_profiles_for_sites_profile_id_site_assignme
         url = url.format(profile_id=profile_id, id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_diagnostic_validation_workflows_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_diagnostic_validation_workflows_id(self, id: Any) -> Dict[str, Any]:
         """Deletes a validation workflow
 
         Deletes the workflow for the given id
@@ -11942,7 +12433,8 @@ def delete_dna_intent_api_v1_diagnostic_validation_workflows_id(self, id: Any) -
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostic_validation_workflows_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostic_validation_workflows_id(self, id: Any) -> Dict[str, Any]:
         """Retrieves validation workflow details
 
         Retrieves workflow details for a workflow id
@@ -11963,7 +12455,8 @@ def get_dna_intent_api_v1_diagnostic_validation_workflows_id(self, id: Any) -> D
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_module_count(self, device_id: Any, name_list: Optional[Any] = None, vendor_equipment_type_list: Optional[Any] = None, part_number_list: Optional[Any] = None, operational_state_code_list: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_module_count(self, device_id: Any, name_list: Optional[Any] = None, vendor_equipment_type_list: Optional[Any] = None, part_number_list: Optional[Any] = None, operational_state_code_list: Optional[Any] = None) -> Dict[str, Any]:
         """Get Module count
 
         Returns Module Count
@@ -11993,7 +12486,8 @@ def get_dna_intent_api_v1_network_device_module_count(self, device_id: Any, name
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_provision_devices_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_provision_devices_id(self, id: Any) -> Dict[str, Any]:
         """Delete provisioned device by Id
 
         Deletes provisioned device based on Id.
@@ -12013,7 +12507,8 @@ def delete_dna_intent_api_v1_sda_provision_devices_id(self, id: Any) -> Dict[str
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_image_distribution(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_image_distribution(self, content__type: Any) -> Dict[str, Any]:
         """Trigger software image distribution
 
         Distributes a software image on a given device. Software image must be imported successfully into DNA Center before it can be distributed
@@ -12034,7 +12529,8 @@ def post_dna_intent_api_v1_image_distribution(self, content__type: Any) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/image/distribution'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_transit_networks_count(self, type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_transit_networks_count(self, type: Optional[Any] = None) -> Dict[str, Any]:
         """Get transit networks count
 
         Returns the count of transit networks that match the provided query parameters.
@@ -12056,7 +12552,8 @@ def get_dna_intent_api_v1_sda_transit_networks_count(self, type: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v2_lan_automation_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v2_lan_automation_id(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """LAN Automation Stop and Update Devices V2
 
         Invoke this API to stop LAN Automation and update device parameters such as Loopback0 IP address and/or hostname discovered in the current session. 
@@ -12079,7 +12576,8 @@ def put_dna_intent_api_v2_lan_automation_id(self, content__type: Any, id: Any) -
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabrics_vlan_to_ssids(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabrics_vlan_to_ssids(self, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Returns all the Fabric Sites that have VLAN to SSID mapping.
 
         It will return all vlan to SSID mapping across all the fabric site
@@ -12103,7 +12601,8 @@ def get_dna_intent_api_v1_sda_fabrics_vlan_to_ssids(self, limit: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_licenses_device_count(self, device_type: Optional[Any] = None, registration_status: Optional[Any] = None, dna_level: Optional[Any] = None, virtual_account_name: Optional[Any] = None, smart_account_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_licenses_device_count(self, device_type: Optional[Any] = None, registration_status: Optional[Any] = None, dna_level: Optional[Any] = None, virtual_account_name: Optional[Any] = None, smart_account_id: Optional[Any] = None) -> Dict[str, Any]:
         """Device Count Details
 
         Get total number of managed device(s).
@@ -12133,7 +12632,8 @@ def get_dna_intent_api_v1_licenses_device_count(self, device_type: Optional[Any]
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_data_reports_report_id_executions(self, report_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_data_reports_report_id_executions(self, report_id: Any) -> Dict[str, Any]:
         """Get all execution details for a given report
 
         Get details of all executions for a given report
@@ -12153,7 +12653,8 @@ def get_dna_intent_api_v1_data_reports_report_id_executions(self, report_id: Any
         url = url.format(report_id=report_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_subscription_rest(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_subscription_rest(self, content__type: Any) -> Dict[str, Any]:
         """Create Rest/Webhook Event Subscription
 
         Create Rest/Webhook Subscription Endpoint for list of registered events
@@ -12174,7 +12675,8 @@ def post_dna_intent_api_v1_event_subscription_rest(self, content__type: Any) -> 
         url = self.base_url + '/dna/intent/api/v1/event/subscription/rest'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_subscription_rest(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_subscription_rest(self, content__type: Any) -> Dict[str, Any]:
         """Update Rest/Webhook Event Subscription
 
         Update Rest/Webhook Subscription Endpoint for list of registered events
@@ -12195,7 +12697,8 @@ def put_dna_intent_api_v1_event_subscription_rest(self, content__type: Any) -> D
         url = self.base_url + '/dna/intent/api/v1/event/subscription/rest'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription_rest(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription_rest(self, event_ids: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, category: Optional[Any] = None, type: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Rest/Webhook Event Subscriptions
 
         Gets the list of Rest/Webhook Subscriptions's based on provided query params
@@ -12235,7 +12738,8 @@ def get_dna_intent_api_v1_event_subscription_rest(self, event_ids: Optional[Any]
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_roles(self, invoke_source: Any) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_roles(self, invoke_source: Any) -> Dict[str, Any]:
         """Get roles API
 
         Get all roles for the Cisco DNA Center System.
@@ -12256,7 +12760,8 @@ def get_dna_system_api_v1_roles(self, invoke_source: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/roles'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v2_applications_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v2_applications_id(self, id: Any) -> Dict[str, Any]:
         """Delete Application
 
         Delete existing custom application by id
@@ -12276,7 +12781,8 @@ def delete_dna_intent_api_v2_applications_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_image_importation_golden_site_site_id_family_device_family_identifier_role_device_role_image_image_id(self, accept: Any, site_id: Any, device_family_identifier: Any, device_role: Any, image_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_image_importation_golden_site_site_id_family_device_family_identifier_role_device_role_image_image_id(self, accept: Any, site_id: Any, device_family_identifier: Any, device_role: Any, image_id: Any) -> Dict[str, Any]:
         """Get Golden Tag Status of an Image.
 
         Get golden tag status of an image. Set siteId as -1 for Global site.
@@ -12302,7 +12808,8 @@ def get_dna_intent_api_v1_image_importation_golden_site_site_id_family_device_fa
         url = url.format(site_id=site_id, device_family_identifier=device_family_identifier, device_role=device_role, image_id=image_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_image_importation_golden_site_site_id_family_device_family_identifier_role_device_role_image_image_id(self, site_id: Any, device_family_identifier: Any, device_role: Any, image_id: Any, accept: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_image_importation_golden_site_site_id_family_device_family_identifier_role_device_role_image_image_id(self, site_id: Any, device_family_identifier: Any, device_role: Any, image_id: Any, accept: Optional[Any] = None) -> Dict[str, Any]:
         """Remove Golden Tag for image.
 
         Remove golden tag. Set siteId as -1 for Global site.
@@ -12328,7 +12835,8 @@ def delete_dna_intent_api_v1_image_importation_golden_site_site_id_family_device
         url = url.format(site_id=site_id, device_family_identifier=device_family_identifier, device_role=device_role, image_id=image_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_port_channels_count(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, port_channel_name: Optional[Any] = None, connected_device_type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_port_channels_count(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, port_channel_name: Optional[Any] = None, connected_device_type: Optional[Any] = None) -> Dict[str, Any]:
         """Get port channel count
 
         Returns the count of port channels that match the provided query parameters.
@@ -12356,7 +12864,8 @@ def get_dna_intent_api_v1_sda_port_channels_count(self, fabric_id: Optional[Any]
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_maps_supported_access_points(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_maps_supported_access_points(self) -> Dict[str, Any]:
         """Maps Supported Access Points
 
         Gets the list of supported access point types as well as valid antenna pattern names that can be used for each.
@@ -12372,7 +12881,8 @@ def get_dna_intent_api_v1_maps_supported_access_points(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/maps/supported-access-points'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_event_event_series_audit_log_parent_records(self, instance_id: Optional[Any] = None, name: Optional[Any] = None, event_id: Optional[Any] = None, category: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, user_id: Optional[Any] = None, context: Optional[Any] = None, event_hierarchy: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, is_system_events: Optional[Any] = None, description: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_event_event_series_audit_log_parent_records(self, instance_id: Optional[Any] = None, name: Optional[Any] = None, event_id: Optional[Any] = None, category: Optional[Any] = None, severity: Optional[Any] = None, domain: Optional[Any] = None, sub_domain: Optional[Any] = None, source: Optional[Any] = None, user_id: Optional[Any] = None, context: Optional[Any] = None, event_hierarchy: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, is_system_events: Optional[Any] = None, description: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get AuditLog Parent Records
 
         Get Parent Audit Log Event instances from the Event-Hub 
@@ -12434,7 +12944,8 @@ def get_dna_data_api_v1_event_event_series_audit_log_parent_records(self, instan
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_dns_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_dns_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set DNS settings for a site
 
         Set DNS settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the settings is unset.
@@ -12457,7 +12968,8 @@ def put_dna_intent_api_v1_sites_id_dns_settings(self, content__type: Any, id: An
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_dns_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_dns_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve DNS settings for a site
 
         Retrieve DNS settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the setting is unset at a site.
@@ -12481,7 +12993,8 @@ def get_dna_intent_api_v1_sites_id_dns_settings(self, id: Any, inherited: Option
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_credential_cli(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_credential_cli(self, content__type: Any) -> Dict[str, Any]:
         """Create CLI credentials
 
         Adds global CLI credential
@@ -12502,7 +13015,8 @@ def post_dna_intent_api_v1_global_credential_cli(self, content__type: Any) -> Di
         url = self.base_url + '/dna/intent/api/v1/global-credential/cli'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_credential_cli(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_credential_cli(self, content__type: Any) -> Dict[str, Any]:
         """Update CLI credentials
 
         Updates global CLI credentials
@@ -12523,7 +13037,8 @@ def put_dna_intent_api_v1_global_credential_cli(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/intent/api/v1/global-credential/cli'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_health_score_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_health_score_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get health score definition for the given id.
 
         Get health score defintion for the given id. Definition includes all properties from HealthScoreDefinition schema by default. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-issueAndHealthDefinitions-1.0.0-resolved.yaml
@@ -12548,7 +13063,8 @@ def get_dna_intent_api_v1_health_score_definitions_id(self, id: Any, x__c_a_l_l_
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_health_score_definitions_id(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_health_score_definitions_id(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Update health score definition for the given id.
 
         Update health threshold, include status of overall health status.
@@ -12578,7 +13094,8 @@ And also to synchronize with global profile issue thresholds of the definition f
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_template_programmer_project(self, id: Optional[Any] = None, name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_template_programmer_project(self, id: Optional[Any] = None, name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
         """Get project(s) details
 
         Get project(s) details
@@ -12608,7 +13125,8 @@ def get_dna_intent_api_v2_template_programmer_project(self, id: Optional[Any] = 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_lan_automation(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_lan_automation(self, content__type: Any) -> Dict[str, Any]:
         """LAN Automation Start
 
         Invoke this API to start LAN Automation for the given site.
@@ -12629,7 +13147,8 @@ def post_dna_intent_api_v1_lan_automation(self, content__type: Any) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/lan-automation'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_file_file_id(self, file_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_file_file_id(self, file_id: Any) -> Dict[str, Any]:
         """Download a file by fileId
 
         Downloads a file specified by fileId
@@ -12649,7 +13168,8 @@ def get_dna_intent_api_v1_file_file_id(self, file_id: Any) -> Dict[str, Any]:
         url = url.format(file_id=file_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_health_score_definitions(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, id: Optional[Any] = None, include_for_overall_health: Optional[Any] = None, attribute: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_health_score_definitions(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, id: Optional[Any] = None, include_for_overall_health: Optional[Any] = None, attribute: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get all health score definitions for given filters.
 
         Get all health score defintions.
@@ -12698,7 +13218,8 @@ id=015d9cba-4f53-4087-8317-7e49e5ffef46&id=015d9cba-4f53-4087-8317-7e49e5ffef47 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_event_email_config(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_event_email_config(self, content__type: Any) -> Dict[str, Any]:
         """Update Email Destination
 
         Update Email Destination
@@ -12719,7 +13240,8 @@ def put_dna_intent_api_v1_event_email_config(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/event/email-config'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_event_email_config(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_event_email_config(self, content__type: Any) -> Dict[str, Any]:
         """Create Email Destination
 
         Create Email Destination
@@ -12740,7 +13262,8 @@ def post_dna_intent_api_v1_event_email_config(self, content__type: Any) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/event/email-config'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_email_config(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_email_config(self) -> Dict[str, Any]:
         """Get Email Destination
 
         Get Email Destination
@@ -12756,7 +13279,8 @@ def get_dna_intent_api_v1_event_email_config(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/event/email-config'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_interfaces(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, network_device_mac_address: Optional[Any] = None, interface_id: Optional[Any] = None, interface_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_interfaces(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, network_device_mac_address: Optional[Any] = None, interface_id: Optional[Any] = None, interface_name: Optional[Any] = None) -> Dict[str, Any]:
         """Gets interfaces along with statistics data from all network devices.
 
         Retrieves the list of the interfaces from all network devices based on the provided query parameters. The latest interfaces data in the specified start and end time range will be returned. When there is no start and end time specified returns the latest available data.
@@ -12915,7 +13439,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_license_setting(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_license_setting(self) -> Dict[str, Any]:
         """Update license setting
 
         Update license setting - Configure default smart account id  and/or virtual account id for auto registration of devices for smart license flow. Virtual account should be part of default smart account. Default smart account id cannot be set to 'null'. Auto registration of devices for smart license flow is applicable only for direct or on-prem SSM connection mode.
@@ -12931,7 +13456,8 @@ def put_dna_intent_api_v1_license_setting(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/licenseSetting'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_license_setting(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_license_setting(self) -> Dict[str, Any]:
         """Retrieve license setting
 
         Retrieves license setting - Default smart account id and virtual account id for auto registration of devices for smart license flow. If default smart account is not configured, 'defaultSmartAccountId' is 'null'. Similarly, if auto registration of devices for smart license flow is not enabled, 'autoRegistrationVirtualAccountId' is 'null'. For smart proxy connection mode, 'autoRegistrationVirtualAccountId' is always 'null'.
@@ -12947,7 +13473,8 @@ def get_dna_intent_api_v1_license_setting(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/licenseSetting'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device_reset(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device_reset(self, content__type: Any) -> Dict[str, Any]:
         """Reset Device
 
         Recovers a device from a Workflow Execution Error state
@@ -12968,7 +13495,8 @@ def post_dna_intent_api_v1_onboarding_pnp_device_reset(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device/reset'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_assurance_issues_query(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_assurance_issues_query(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get the details of issues for given set of filters
 
         Returns all details of each issue along with suggested actions for given set of filters specified in request body. If there is no start and/or end time, then end time will be defaulted to current time and start time will be defaulted to 24-hours ago from end time. https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -12995,7 +13523,8 @@ def post_dna_data_api_v1_assurance_issues_query(self, content__type: Any, accept
         url = self.base_url + '/dna/data/api/v1/assuranceIssues/query'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_controllers_device_id_provision(self, content__type: Any, device_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_controllers_device_id_provision(self, content__type: Any, device_id: Any) -> Dict[str, Any]:
         """Wireless Controller Provision
 
         This API is used to provision wireless controller
@@ -13018,7 +13547,8 @@ def post_dna_intent_api_v1_wireless_controllers_device_id_provision(self, conten
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_custom_issue_definitions_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, id: Optional[Any] = None, profile_id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, is_enabled: Optional[Any] = None, severity: Optional[Any] = None, facility: Optional[Any] = None, mnemonic: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_custom_issue_definitions_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, id: Optional[Any] = None, profile_id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, is_enabled: Optional[Any] = None, severity: Optional[Any] = None, facility: Optional[Any] = None, mnemonic: Optional[Any] = None) -> Dict[str, Any]:
         """Get the total custom issue definitions count based on the provided filters.
 
         Get the total number of Custom issue definitions count based on the provided filters. The supported filters are id, name, profileId and definition enable status, severity, facility and mnemonic. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceUserDefinedIssueAPIs-1.0.0-resolved.yaml
@@ -13063,7 +13593,8 @@ Examples: id=6bef213c-19ca-4170-8375-b694e251101c (single entity uuid requested)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_dot11be_profiles_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_dot11be_profiles_count(self) -> Dict[str, Any]:
         """Get 802.11be Profiles Count
 
         This API allows the user to get count of all 802.11be Profile(s)
@@ -13079,7 +13610,8 @@ def get_dna_intent_api_v1_wireless_settings_dot11be_profiles_count(self) -> Dict
         url = self.base_url + '/dna/intent/api/v1/wirelessSettings/dot11beProfiles/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_multicast(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_multicast(self, content__type: Any) -> Dict[str, Any]:
         """Update multicast
 
         Updates a multicast configuration at a fabric level based on user input.
@@ -13100,7 +13632,8 @@ def put_dna_intent_api_v1_sda_multicast(self, content__type: Any) -> Dict[str, A
         url = self.base_url + '/dna/intent/api/v1/sda/multicast'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_multicast(self, fabric_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_multicast(self, fabric_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get multicast
 
         Returns a list of multicast configurations at a fabric site level that match the provided query parameters.
@@ -13126,7 +13659,8 @@ def get_dna_intent_api_v1_sda_multicast(self, fabric_id: Optional[Any] = None, o
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_devices_assign_to_site_apply(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_devices_assign_to_site_apply(self, content__type: Any) -> Dict[str, Any]:
         """Assign network devices to a site
 
         Assign unprovisioned network devices to a site. Along with that it can also be used to assign unprovisioned network devices to a different site. If device controllability is enabled, it will be triggered once device assigned to site successfully. Device Controllability can be enabled/disabled using `/dna/intent/api/v1/networkDevices/deviceControllability/settings`.
@@ -13147,7 +13681,8 @@ def post_dna_intent_api_v1_network_devices_assign_to_site_apply(self, content__t
         url = self.base_url + '/dna/intent/api/v1/networkDevices/assignToSite/apply'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices_count(self, fabric_id: Any, network_device_id: Optional[Any] = None, device_roles: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices_count(self, fabric_id: Any, network_device_id: Optional[Any] = None, device_roles: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices count
 
         Returns the count of fabric devices that match the provided query parameters.
@@ -13173,7 +13708,8 @@ def get_dna_intent_api_v1_sda_fabric_devices_count(self, fabric_id: Any, network
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_flexible_report_report_content_report_id_execution_id(self, content__type: Any, report_id: Any, execution_id: Any) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_flexible_report_report_content_report_id_execution_id(self, content__type: Any, report_id: Any, execution_id: Any) -> Dict[str, Any]:
         """Download Flexible Report
 
         This is used to download the flexible report. The API returns report content. Save the response to a file by converting the response data as a blob and setting the file format available from content-disposition response header.
@@ -13197,7 +13733,8 @@ def get_dna_data_api_v1_flexible_report_report_content_report_id_execution_id(se
         url = url.format(report_id=report_id, execution_id=execution_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_template_exporttemplates(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_template_exporttemplates(self, content__type: Any) -> Dict[str, Any]:
         """Exports the templates for a given criteria.
 
         Exports the templates for given templateIds.
@@ -13218,7 +13755,8 @@ def post_dna_intent_api_v1_template_programmer_template_exporttemplates(self, co
         url = self.base_url + '/dna/intent/api/v1/template-programmer/template/exporttemplates'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_users_external_servers(self, invoke_source: Any) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_users_external_servers(self, invoke_source: Any) -> Dict[str, Any]:
         """Get external authentication servers API
 
         Get external users authentication servers.
@@ -13240,7 +13778,8 @@ def get_dna_system_api_v1_users_external_servers(self, invoke_source: Any) -> Di
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_layer3_virtual_networks_count(self, fabric_id: Optional[Any] = None, anchored_site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_layer3_virtual_networks_count(self, fabric_id: Optional[Any] = None, anchored_site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get layer 3 virtual networks count
 
         Returns the count of layer 3 virtual networks that match the provided query parameters.
@@ -13264,7 +13803,8 @@ def get_dna_intent_api_v1_sda_layer3_virtual_networks_count(self, fabric_id: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_interfaces_query_count(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_interfaces_query_count(self, content__type: Any) -> Dict[str, Any]:
         """The Total interfaces count across the Network devices.
 
         Gets the total number of interfaces across the Network devices based on the provided complex filters and aggregation functions. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-interfaces-1.0.2-resolved.yaml
@@ -13285,7 +13825,8 @@ def post_dna_data_api_v1_interfaces_query_count(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/data/api/v1/interfaces/query/count'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_lan_automation_status(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_lan_automation_status(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """LAN Automation Status
 
         Invoke this API to get the LAN Automation session status. 
@@ -13309,7 +13850,8 @@ def get_dna_intent_api_v1_lan_automation_status(self, offset: Optional[Any] = No
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_licenses_smart_account_virtual_account_virtual_account_name_register(self, virtual_account_name: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_licenses_smart_account_virtual_account_virtual_account_name_register(self, virtual_account_name: Any) -> Dict[str, Any]:
         """Device Registration
 
         Register device(s) in CSSM(Cisco Smart Software Manager).
@@ -13329,7 +13871,8 @@ def put_dna_intent_api_v1_licenses_smart_account_virtual_account_virtual_account
         url = url.format(virtual_account_name=virtual_account_name)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_id_network_device_count(self, id: Any, task_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_id_network_device_count(self, id: Any, task_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Devices discovered by Id
 
         Returns the count of network devices discovered in the given discovery. Discovery ID can be obtained using the "Get Discoveries by range" API.
@@ -13353,7 +13896,8 @@ def get_dna_intent_api_v1_discovery_id_network_device_count(self, id: Any, task_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_task_task_id(self, task_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_task_task_id(self, task_id: Any) -> Dict[str, Any]:
         """Get task by Id
 
         Returns a task by specified id
@@ -13373,7 +13917,8 @@ def get_dna_intent_api_v1_task_task_id(self, task_id: Any) -> Dict[str, Any]:
         url = url.format(task_id=task_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_role_permissions(self) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_role_permissions(self) -> Dict[str, Any]:
         """Get permissions API
 
         Get permissions for a role from Cisco DNA Center System.
@@ -13389,7 +13934,8 @@ def get_dna_system_api_v1_role_permissions(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/role/permissions'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_id_network_device_start_index_records_to_return(self, id: Any, start_index: Any, records_to_return: Any, task_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_id_network_device_start_index_records_to_return(self, id: Any, start_index: Any, records_to_return: Any, task_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Discovered devices by range
 
         Returns the network devices discovered for the given discovery and for the given range. The maximum number of records that can be retrieved is 500. Discovery ID can be obtained using the "Get Discoveries by range" API.
@@ -13415,7 +13961,8 @@ def get_dna_intent_api_v1_discovery_id_network_device_start_index_records_to_ret
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_clients_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, type: Optional[Any] = None, os_type: Optional[Any] = None, os_version: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, ipv4_address: Optional[Any] = None, ipv6_address: Optional[Any] = None, mac_address: Optional[Any] = None, wlc_name: Optional[Any] = None, connected_network_device_name: Optional[Any] = None, ssid: Optional[Any] = None, band: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_clients_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, type: Optional[Any] = None, os_type: Optional[Any] = None, os_version: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, ipv4_address: Optional[Any] = None, ipv6_address: Optional[Any] = None, mac_address: Optional[Any] = None, wlc_name: Optional[Any] = None, connected_network_device_name: Optional[Any] = None, ssid: Optional[Any] = None, band: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the total count of clients by applying basic filtering
 
         Retrieves the number of clients by applying basic filtering. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -13557,7 +14104,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_uuid_poe(self, device_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_uuid_poe(self, device_uuid: Any) -> Dict[str, Any]:
         """POE details 
 
         Returns POE details for device.
@@ -13577,7 +14125,8 @@ def get_dna_intent_api_v1_network_device_device_uuid_poe(self, device_uuid: Any)
         url = url.format(device_uuid=device_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_product_names(self, product_name: Optional[Any] = None, product_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_product_names(self, product_name: Optional[Any] = None, product_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the list of network device product names
 
         Get the list of network device product names, their ordinal, and the support PIDs based on filter criteria.
@@ -13606,7 +14155,8 @@ def get_dna_intent_api_v1_product_names(self, product_name: Optional[Any] = None
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device_vacct_sync(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device_vacct_sync(self, content__type: Any) -> Dict[str, Any]:
         """Sync Virtual Account Devices
 
         Synchronizes the device info from the given smart account & virtual account with the PnP database. The response payload returns a list of synced devices (Deprecated).
@@ -13627,7 +14177,8 @@ def post_dna_intent_api_v1_onboarding_pnp_device_vacct_sync(self, content__type:
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device/vacct-sync'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_network_device_device_id_user_defined_field(self, device_id: Any, name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_network_device_device_id_user_defined_field(self, device_id: Any, name: Any) -> Dict[str, Any]:
         """Remove User-Defined-Field from device
 
         Remove a User-Defined-Field from device. Name of UDF has to be passed as the query parameter. Please note that Global UDF will not be deleted by this operation.
@@ -13651,7 +14202,8 @@ def delete_dna_intent_api_v1_network_device_device_id_user_defined_field(self, d
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_device_device_id_user_defined_field(self, device_id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_device_device_id_user_defined_field(self, device_id: Any) -> Dict[str, Any]:
         """Add User-Defined-Field to device
 
         Assigns an existing Global User-Defined-Field to a device. If the UDF is already assigned to the specific device, then it updates the device UDF value accordingly. Please note that the assigning UDF 'name' must be an existing global UDF. Otherwise error shall be shown.
@@ -13671,7 +14223,8 @@ def put_dna_intent_api_v1_network_device_device_id_user_defined_field(self, devi
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_project_project_id_template(self, content__type: Any, project_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_project_project_id_template(self, content__type: Any, project_id: Any) -> Dict[str, Any]:
         """Create Template
 
         API to create a template by project id.
@@ -13694,7 +14247,8 @@ def post_dna_intent_api_v1_template_programmer_project_project_id_template(self,
         url = url.format(project_id=project_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_network_device_id_anchor_managed_ap_locations(self, network_device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_network_device_id_anchor_managed_ap_locations(self, network_device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get Anchor Managed AP Locations for specific Wireless Controller
 
         Retrieves all the details of Anchor Managed AP locations associated with the specific Wireless Controller.
@@ -13720,7 +14274,8 @@ def get_dna_intent_api_v1_wireless_controllers_network_device_id_anchor_managed_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_device_uuid_interface_interface_uuid_neighbor(self, device_uuid: Any, interface_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_device_uuid_interface_interface_uuid_neighbor(self, device_uuid: Any, interface_uuid: Any) -> Dict[str, Any]:
         """Get connected device detail
 
         Get connected device detail for given deviceUuid and interfaceUuid
@@ -13741,7 +14296,8 @@ def get_dna_intent_api_v1_network_device_device_uuid_interface_interface_uuid_ne
         url = url.format(device_uuid=device_uuid, interface_uuid=interface_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_site_member_id_member(self, id: Any, member_type: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, level: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_site_member_id_member(self, id: Any, member_type: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, level: Optional[Any] = None) -> Dict[str, Any]:
         """Get devices that are assigned to a site
 
         API to get devices that are assigned to a site.
@@ -13771,7 +14327,8 @@ def get_dna_intent_api_v1_site_member_id_member(self, id: Any, member_type: Any,
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_assurance_issues_summary_analytics(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_assurance_issues_summary_analytics(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get summary analytics data of issues
 
         Gets the summary analytics data related to issues based on given filters and group by field. This data can be used to find issue counts grouped by different keys. https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -13798,7 +14355,8 @@ def post_dna_data_api_v1_assurance_issues_summary_analytics(self, content__type:
         url = self.base_url + '/dna/data/api/v1/assuranceIssues/summaryAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_transit_networks_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_transit_networks_id(self, id: Any) -> Dict[str, Any]:
         """Delete transit network by id
 
         Deletes a transit network based on id.
@@ -13818,7 +14376,8 @@ def delete_dna_intent_api_v1_sda_transit_networks_id(self, id: Any) -> Dict[str,
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_sites_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_sites_id(self, id: Any) -> Dict[str, Any]:
         """Delete fabric site by id
 
         Deletes a fabric site based on id.
@@ -13838,7 +14397,8 @@ def delete_dna_intent_api_v1_sda_fabric_sites_id(self, id: Any) -> Dict[str, Any
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_lan_automation_log(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_lan_automation_log(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """LAN Automation Log 
 
         Invoke this API to get the LAN Automation session logs.
@@ -13862,7 +14422,8 @@ def get_dna_intent_api_v1_lan_automation_log(self, offset: Optional[Any] = None,
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_site_id_profile_assignments(self, site_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_site_id_profile_assignments(self, site_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the list of network profiles that the given site has been assigned
 
         Retrieves the list of profiles that the given site has been assigned.  These profiles may either be directly assigned to this site, or were assigned to a parent site and have been inherited.
@@ -13891,7 +14452,8 @@ These assigments can be modified via the `/dna/intent/api/v1/networkProfilesForS
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_controllers_device_id_assign_managed_ap_locations(self, content__type: Any, device_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_controllers_device_id_assign_managed_ap_locations(self, content__type: Any, device_id: Any) -> Dict[str, Any]:
         """Assign Managed AP Locations For WLC
 
         This API allows user to assign Managed AP Locations for WLC by device ID. The payload should always be a complete list. The Managed AP Locations included in the payload will be fully processed for both addition and deletion.
@@ -13914,7 +14476,8 @@ def post_dna_intent_api_v1_wireless_controllers_device_id_assign_managed_ap_loca
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_job(self, ip_address: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_job(self, ip_address: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Discovery jobs by IP
 
         Returns the list of discovery jobs for the given IP
@@ -13942,7 +14505,8 @@ def get_dna_intent_api_v1_discovery_job(self, ip_address: Any, offset: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v2_application_policy_application_set_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v2_application_policy_application_set_id(self, id: Any) -> Dict[str, Any]:
         """Delete Application Set
 
         Delete existing custom application set by id
@@ -13962,7 +14526,8 @@ def delete_dna_intent_api_v2_application_policy_application_set_id(self, id: Any
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_template_programmer_template(self, id: Optional[Any] = None, name: Optional[Any] = None, project_id: Optional[Any] = None, project_name: Optional[Any] = None, software_type: Optional[Any] = None, software_version: Optional[Any] = None, product_family: Optional[Any] = None, product_series: Optional[Any] = None, product_type: Optional[Any] = None, filter_conflicting_templates: Optional[Any] = None, tags: Optional[Any] = None, un_committed: Optional[Any] = None, sort_order: Optional[Any] = None, all_template_attributes: Optional[Any] = None, include_version_details: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_template_programmer_template(self, id: Optional[Any] = None, name: Optional[Any] = None, project_id: Optional[Any] = None, project_name: Optional[Any] = None, software_type: Optional[Any] = None, software_version: Optional[Any] = None, product_family: Optional[Any] = None, product_series: Optional[Any] = None, product_type: Optional[Any] = None, filter_conflicting_templates: Optional[Any] = None, tags: Optional[Any] = None, un_committed: Optional[Any] = None, sort_order: Optional[Any] = None, all_template_attributes: Optional[Any] = None, include_version_details: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get template(s) details
 
         Get template(s) details
@@ -14016,7 +14581,8 @@ def get_dna_intent_api_v2_template_programmer_template(self, id: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_layer2_virtual_networks_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_layer2_virtual_networks_id(self, id: Any) -> Dict[str, Any]:
         """Delete layer 2 virtual network by id
 
         Deletes a layer 2 virtual network based on id.
@@ -14036,7 +14602,8 @@ def delete_dna_intent_api_v1_sda_layer2_virtual_networks_id(self, id: Any) -> Di
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_lan_automation_log_id_serial_number(self, id: Any, serial_number: Any, log_level: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_lan_automation_log_id_serial_number(self, id: Any, serial_number: Any, log_level: Optional[Any] = None) -> Dict[str, Any]:
         """LAN Automation Logs for Individual Devices
 
         Invoke this API to get the LAN Automation session logs for individual devices based on the given LAN Automation session id and device serial number. 
@@ -14061,7 +14628,8 @@ def get_dna_intent_api_v1_lan_automation_log_id_serial_number(self, id: Any, ser
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_assurance_issues_id_update(self, content__type: Any, id: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_assurance_issues_id_update(self, content__type: Any, id: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Update the given issue by updating selected fields
 
         Updates selected fields in the given issue. Currently the only field that can be updated is 'notes' field. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesLifecycle-1.0.0-resolved.yaml
@@ -14090,7 +14658,8 @@ def post_dna_intent_api_v1_assurance_issues_id_update(self, content__type: Any, 
         url = url.format(id=id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_id_job(self, id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, ip_address: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_id_job(self, id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, ip_address: Optional[Any] = None) -> Dict[str, Any]:
         """Get list of discoveries by discovery Id
 
         Returns the list of discovery jobs for the given Discovery ID. The results can be optionally filtered based on IP. Discovery ID can be obtained using the "Get Discoveries by range" API.
@@ -14118,7 +14687,8 @@ def get_dna_intent_api_v1_discovery_id_job(self, id: Any, offset: Optional[Any] 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_topology_physical_topology(self, node_type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_topology_physical_topology(self, node_type: Optional[Any] = None) -> Dict[str, Any]:
         """Get Physical Topology
 
         Returns the raw physical topology by specified criteria of nodeType
@@ -14140,7 +14710,8 @@ def get_dna_intent_api_v1_topology_physical_topology(self, node_type: Optional[A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_topology_site_topology(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_topology_site_topology(self) -> Dict[str, Any]:
         """Get Site Topology
 
         Returns site topology
@@ -14156,7 +14727,8 @@ def get_dna_intent_api_v1_topology_site_topology(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/topology/site-topology'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_integration_settings_status(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_integration_settings_status(self) -> Dict[str, Any]:
         """Get ITSM Integration status
 
         Fetches ITSM Integration status
@@ -14172,7 +14744,8 @@ def get_dna_intent_api_v1_integration_settings_status(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/integration-settings/status'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_network_device_id_secondary_managed_ap_locations(self, network_device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_network_device_id_secondary_managed_ap_locations(self, network_device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None) -> Dict[str, Any]:
         """Get Secondary Managed AP Locations for specific Wireless Controller
 
         Retrieves all the details of Secondary Managed AP locations associated with the specific Wireless Controller.
@@ -14198,7 +14771,8 @@ def get_dna_intent_api_v1_wireless_controllers_network_device_id_secondary_manag
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_ntp_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_ntp_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set NTP settings for a site
 
         Set NTP settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the settings is unset.
@@ -14221,7 +14795,8 @@ def put_dna_intent_api_v1_sites_id_ntp_settings(self, content__type: Any, id: An
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_ntp_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_ntp_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve NTP settings for a site
 
         Retrieve NTP settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the setting is unset at a site.
@@ -14245,7 +14820,8 @@ def get_dna_intent_api_v1_sites_id_ntp_settings(self, id: Any, inherited: Option
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tags_interfaces_members_associations(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tags_interfaces_members_associations(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve tags associated with the interfaces.
 
         Fetches the tags associated with the interfaces. Interfaces that don't have any tags associated will not be included in the response. A tag is a user-defined or system-defined construct to group resources. When an interface is tagged, it is called a member of the tag.
@@ -14269,7 +14845,8 @@ def get_dna_intent_api_v1_tags_interfaces_members_associations(self, offset: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_image_updates_count(self, id: Optional[Any] = None, parent_id: Optional[Any] = None, network_device_id: Optional[Any] = None, status: Optional[Any] = None, image_name: Optional[Any] = None, host_name: Optional[Any] = None, management_address: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_image_updates_count(self, id: Optional[Any] = None, parent_id: Optional[Any] = None, network_device_id: Optional[Any] = None, status: Optional[Any] = None, image_name: Optional[Any] = None, host_name: Optional[Any] = None, management_address: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
         """Count of network device image updates
 
         Returns the count of network device image updates based on the given filter criteria
@@ -14307,7 +14884,8 @@ def get_dna_intent_api_v1_network_device_image_updates_count(self, id: Optional[
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_device_replacement_count(self, replacement_status: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_device_replacement_count(self, replacement_status: Optional[Any] = None) -> Dict[str, Any]:
         """Return replacement devices count
 
         Get replacement devices count
@@ -14329,7 +14907,8 @@ def get_dna_intent_api_v1_device_replacement_count(self, replacement_status: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_buildings_building_id_planned_access_points(self, building_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None, radios: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_buildings_building_id_planned_access_points(self, building_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None, radios: Optional[Any] = None) -> Dict[str, Any]:
         """Get Planned Access Points for Building
 
         Provides a list of Planned Access Points for the Building it is requested for
@@ -14357,7 +14936,8 @@ def get_dna_intent_api_v1_buildings_building_id_planned_access_points(self, buil
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_system_issue_definitions_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, profile_id: Optional[Any] = None, id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, issue_enabled: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_system_issue_definitions_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, device_type: Optional[Any] = None, profile_id: Optional[Any] = None, id: Optional[Any] = None, name: Optional[Any] = None, priority: Optional[Any] = None, issue_enabled: Optional[Any] = None) -> Dict[str, Any]:
         """Get the count of system defined issue definitions based on provided filters.
 
         Get the count of system defined issue definitions based on provided filters. Supported filters are id, name, profileId and definition enable status. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-issueAndHealthDefinitions-1.0.0-resolved.yaml
@@ -14417,7 +14997,8 @@ name=BGP_Down&name=BGP_Flap (multiple issue names separated by & operator)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_product_names_count(self, product_name: Optional[Any] = None, product_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_product_names_count(self, product_name: Optional[Any] = None, product_id: Optional[Any] = None) -> Dict[str, Any]:
         """Count of network product names
 
         Count of product names based on filter criteria
@@ -14441,7 +15022,8 @@ def get_dna_intent_api_v1_product_names_count(self, product_name: Optional[Any] 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_accesspoint_configuration_summary(self, key: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_accesspoint_configuration_summary(self, key: Any) -> Dict[str, Any]:
         """Get Access Point Configuration
 
         Users can query the access point configuration information per device using the ethernet MAC address
@@ -14463,7 +15045,8 @@ def get_dna_intent_api_v1_wireless_accesspoint_configuration_summary(self, key: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_device_brief(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_device_brief(self, content__type: Any) -> Dict[str, Any]:
         """Update Device role
 
         Updates the role of the device as access, core, distribution, border router
@@ -14484,7 +15067,8 @@ def put_dna_intent_api_v1_network_device_brief(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/intent/api/v1/network-device/brief'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_image_importation_source_url(self, content__type: Any, schedule_at: Optional[Any] = None, schedule_desc: Optional[Any] = None, schedule_origin: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_image_importation_source_url(self, content__type: Any, schedule_at: Optional[Any] = None, schedule_desc: Optional[Any] = None, schedule_origin: Optional[Any] = None) -> Dict[str, Any]:
         """Import software image via URL
 
         Fetches a software image from remote file system (using URL for HTTP/FTP) and uploads to DNA Center. Supported image files extensions are bin, img, tar, smu, pie, aes, iso, ova, tar_gz and qcow2
@@ -14513,7 +15097,8 @@ def post_dna_intent_api_v1_image_importation_source_url(self, content__type: Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_config(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_config(self) -> Dict[str, Any]:
         """Get Device Config for all devices
 
         Returns the config for all devices. This API has been deprecated and will not be available in a Cisco Catalyst Center release after Nov 1st 2024 23:59:59 GMT.
@@ -14529,7 +15114,8 @@ def get_dna_intent_api_v1_network_device_config(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/network-device/config'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_topology_l2_vlan_i_d(self, vlan_i_d: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_topology_l2_vlan_i_d(self, vlan_i_d: Any) -> Dict[str, Any]:
         """Get topology details
 
         Returns Layer 2 network topology by specified VLAN ID
@@ -14549,7 +15135,8 @@ def get_dna_intent_api_v1_topology_l2_vlan_i_d(self, vlan_i_d: Any) -> Dict[str,
         url = url.format(vlan_i_d=vlan_i_d)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_assurance_issues(self, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, is_global: Optional[Any] = None, priority: Optional[Any] = None, severity: Optional[Any] = None, status: Optional[Any] = None, entity_type: Optional[Any] = None, category: Optional[Any] = None, device_type: Optional[Any] = None, name: Optional[Any] = None, issue_id: Optional[Any] = None, entity_id: Optional[Any] = None, updated_by: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_name: Optional[Any] = None, site_id: Optional[Any] = None, fabric_site_id: Optional[Any] = None, fabric_vn_name: Optional[Any] = None, fabric_transit_site_id: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None, ai_driven: Optional[Any] = None, fabric_driven: Optional[Any] = None, fabric_site_driven: Optional[Any] = None, fabric_vn_driven: Optional[Any] = None, fabric_transit_driven: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_assurance_issues(self, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, is_global: Optional[Any] = None, priority: Optional[Any] = None, severity: Optional[Any] = None, status: Optional[Any] = None, entity_type: Optional[Any] = None, category: Optional[Any] = None, device_type: Optional[Any] = None, name: Optional[Any] = None, issue_id: Optional[Any] = None, entity_id: Optional[Any] = None, updated_by: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_name: Optional[Any] = None, site_id: Optional[Any] = None, fabric_site_id: Optional[Any] = None, fabric_vn_name: Optional[Any] = None, fabric_transit_site_id: Optional[Any] = None, network_device_id: Optional[Any] = None, network_device_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None, ai_driven: Optional[Any] = None, fabric_driven: Optional[Any] = None, fabric_site_driven: Optional[Any] = None, fabric_vn_driven: Optional[Any] = None, fabric_transit_driven: Optional[Any] = None) -> Dict[str, Any]:
         """Get the details of issues for given set of filters
 
         Returns all details of each issue along with suggested actions for given set of filters specified in query parameters. If there is no start and/or end time, then end time will be defaulted to current time and start time will be defaulted to 24-hours ago from end time. All string type query parameters support wildcard search (using *). For example: siteHierarchy=Global/San Jose/* returns issues under all sites whole siteHierarchy starts with "Global/San Jose/". https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -14745,7 +15332,8 @@ Examples: `attribute=deviceType` (single attribute requested) `attribute=deviceT
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_licenses_smart_accounts(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_licenses_smart_accounts(self) -> Dict[str, Any]:
         """Smart Account Details
 
         Retrieve details of all smart accounts.
@@ -14761,7 +15349,8 @@ def get_dna_intent_api_v1_licenses_smart_accounts(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/licenses/smartAccounts'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits_count(self, fabric_id: Any, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits_count(self, fabric_id: Any, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices layer 3 handoffs with ip transit count
 
         Returns the count of layer 3 handoffs with ip transit of fabric devices that match the provided query parameters.
@@ -14785,7 +15374,8 @@ def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits_count(s
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits_count(self, fabric_id: Any, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits_count(self, fabric_id: Any, network_device_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get fabric devices layer 3 handoffs with sda transit count
 
         Returns the count of layer 3 handoffs with sda transit of fabric devices that match the provided query parameters.
@@ -14809,7 +15399,8 @@ def get_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_sda_transits_count(
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_profiles_for_sites(self, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, type: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_profiles_for_sites(self, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, type: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the list of network profiles for sites
 
         Retrieves the list of network profiles for sites.
@@ -14839,7 +15430,8 @@ def get_dna_intent_api_v1_network_profiles_for_sites(self, offset: Optional[Any]
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_functional_capability(self, device_id: Any, function_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_functional_capability(self, device_id: Any, function_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Functional Capability for devices
 
         Returns the functional-capability for given devices
@@ -14863,7 +15455,8 @@ def get_dna_intent_api_v1_network_device_functional_capability(self, device_id: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_areas(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_areas(self, content__type: Any) -> Dict[str, Any]:
         """Creates an area
 
         Creates an area in the network hierarchy.
@@ -14884,7 +15477,8 @@ def post_dna_intent_api_v1_areas(self, content__type: Any) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/areas'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_port_assignments(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, interface_name: Optional[Any] = None, data_vlan_name: Optional[Any] = None, voice_vlan_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_port_assignments(self, fabric_id: Optional[Any] = None, network_device_id: Optional[Any] = None, interface_name: Optional[Any] = None, data_vlan_name: Optional[Any] = None, voice_vlan_name: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get port assignments
 
         Returns a list of port assignments that match the provided query parameters.
@@ -14918,7 +15512,8 @@ def get_dna_intent_api_v1_sda_port_assignments(self, fabric_id: Optional[Any] = 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_port_assignments(self, fabric_id: Any, network_device_id: Any, interface_name: Optional[Any] = None, data_vlan_name: Optional[Any] = None, voice_vlan_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_port_assignments(self, fabric_id: Any, network_device_id: Any, interface_name: Optional[Any] = None, data_vlan_name: Optional[Any] = None, voice_vlan_name: Optional[Any] = None) -> Dict[str, Any]:
         """Delete port assignments
 
         Deletes port assignments based on user input.
@@ -14948,7 +15543,8 @@ def delete_dna_intent_api_v1_sda_port_assignments(self, fabric_id: Any, network_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sda_port_assignments(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sda_port_assignments(self, content__type: Any) -> Dict[str, Any]:
         """Update port assignments
 
         Updates port assignments based on user input.
@@ -14969,7 +15565,8 @@ def put_dna_intent_api_v1_sda_port_assignments(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/intent/api/v1/sda/portAssignments'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sda_port_assignments(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sda_port_assignments(self, content__type: Any) -> Dict[str, Any]:
         """Add port assignments
 
         Adds port assignments based on user input.
@@ -14990,7 +15587,8 @@ def post_dna_intent_api_v1_sda_port_assignments(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/intent/api/v1/sda/portAssignments'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_system_api_v1_auth_token(self, content__type: Any, authorization: Any) -> Dict[str, Any]:
+
+    def post_dna_system_api_v1_auth_token(self, content__type: Any, authorization: Any) -> Dict[str, Any]:
         """Authentication API
 
         API to obtain an access token, which remains valid for 1 hour. The token obtained using this API is required to be set as value to the X-Auth-Token HTTP Header for all API calls to Cisco DNA Center.
@@ -15014,7 +15612,8 @@ def post_dna_system_api_v1_auth_token(self, content__type: Any, authorization: A
         url = self.base_url + '/dna/system/api/v1/auth/token'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_assurance_events_query(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_assurance_events_query(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Query assurance events with filters
 
         Returns the list of events discovered by Catalyst Center, determined by the complex filters. Please refer to the 'API Support Documentation' section to understand which fields are supported. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceEvents-1.0.0-resolved.yaml
@@ -15039,7 +15638,8 @@ def post_dna_data_api_v1_assurance_events_query(self, content__type: Any, x__c_a
         url = self.base_url + '/dna/data/api/v1/assuranceEvents/query'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_dnacaap_management_execution_status_execution_id(self, execution_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_dnacaap_management_execution_status_execution_id(self, execution_id: Any) -> Dict[str, Any]:
         """Get Business API Execution Details
 
         Retrieves the execution details of a Business API
@@ -15059,7 +15659,8 @@ def get_dna_intent_api_v1_dnacaap_management_execution_status_execution_id(self,
         url = url.format(execution_id=execution_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_lan_automation_sessions(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_lan_automation_sessions(self) -> Dict[str, Any]:
         """LAN Automation Active Sessions
 
         Invoke this API to get the LAN Automation active session information
@@ -15075,7 +15676,8 @@ def get_dna_intent_api_v1_lan_automation_sessions(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/lan-automation/sessions'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_app_policy_intent(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_app_policy_intent(self, content__type: Any) -> Dict[str, Any]:
         """Application Policy Intent
 
         Create/Update/Delete application policy
@@ -15096,7 +15698,8 @@ def post_dna_intent_api_v1_app_policy_intent(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/app-policy-intent'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_devices_not_assigned_to_site(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_devices_not_assigned_to_site(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get site not assigned network devices
 
         Get network devices that are not assigned to any site.
@@ -15120,7 +15723,8 @@ def get_dna_intent_api_v1_network_devices_not_assigned_to_site(self, offset: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_device_reboot_apreboot_status(self, parent_task_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_device_reboot_apreboot_status(self, parent_task_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Access Point Reboot task result
 
         Users can query the access point reboot status using this intent API
@@ -15142,7 +15746,8 @@ def get_dna_intent_api_v1_device_reboot_apreboot_status(self, parent_task_id: Op
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_device_detail(self, identifier: Any, search_by: Any, timestamp: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_device_detail(self, identifier: Any, search_by: Any, timestamp: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Detail
 
         Returns detailed Network Device information retrieved by Mac Address, Device Name or UUID for any given point of time. 
@@ -15168,7 +15773,8 @@ def get_dna_intent_api_v1_device_detail(self, identifier: Any, search_by: Any, t
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_integrate_ise_id(self, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_integrate_ise_id(self, id: Any) -> Dict[str, Any]:
         """Accept Cisco ISE Server Certificate for Cisco ISE Server Integration
 
         API to accept Cisco ISE server certificate for Cisco ISE server integration. Use ‘Cisco ISE Server Integration Status’ Intent API to check the integration status. This API can be used to retry the failed integration.
@@ -15188,7 +15794,8 @@ def put_dna_intent_api_v1_integrate_ise_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_lan_automation_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_lan_automation_count(self) -> Dict[str, Any]:
         """LAN Automation Session Count
 
         Invoke this API to get the total count of LAN Automation sessions.
@@ -15204,7 +15811,8 @@ def get_dna_intent_api_v1_lan_automation_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/lan-automation/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_ip_address_ip_address(self, ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_ip_address_ip_address(self, ip_address: Any) -> Dict[str, Any]:
         """Get Network Device by IP
 
         Returns the network device by specified IP address
@@ -15224,7 +15832,8 @@ def get_dna_intent_api_v1_network_device_ip_address_ip_address(self, ip_address:
         url = url.format(ip_address=ip_address)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_device_file(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_device_file(self, content__type: Any) -> Dict[str, Any]:
         """Export Device list
 
         Exports the selected network device to a file
@@ -15245,7 +15854,8 @@ def post_dna_intent_api_v1_network_device_file(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/intent/api/v1/network-device/file'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_device_deviceid_management_address(self, deviceid: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_device_deviceid_management_address(self, deviceid: Any) -> Dict[str, Any]:
         """Update Device Management Address
 
         This is a simple PUT API to edit the management IP Address of the device.
@@ -15265,7 +15875,8 @@ def put_dna_intent_api_v1_network_device_deviceid_management_address(self, devic
         url = url.format(deviceid=deviceid)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_tag_id_member_member_id(self, id: Any, member_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_tag_id_member_member_id(self, id: Any, member_id: Any) -> Dict[str, Any]:
         """Remove Tag member
 
         Removes Tag member from the tag specified by id
@@ -15286,7 +15897,8 @@ def delete_dna_intent_api_v1_tag_id_member_member_id(self, id: Any, member_id: A
         url = url.format(id=id, member_id=member_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device_site_config_preview(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device_site_config_preview(self, content__type: Any) -> Dict[str, Any]:
         """Preview Config
 
         Triggers a preview for site-based Day 0 Configuration
@@ -15307,7 +15919,8 @@ def post_dna_intent_api_v1_onboarding_pnp_device_site_config_preview(self, conte
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device/site-config-preview'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_assurance_issues_query_count(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_assurance_issues_query_count(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get the total number of issues for given set of filters
 
         Returns the total number issues for given set of filters. If there is no start and/or end time, then end time will be defaulted to current time and start time will be defaulted to 24-hours ago from end time. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -15331,7 +15944,8 @@ def post_dna_data_api_v1_assurance_issues_query_count(self, content__type: Any, 
         url = self.base_url + '/dna/data/api/v1/assuranceIssues/query/count'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_device_poller_cli_read_request(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_device_poller_cli_read_request(self, content__type: Any) -> Dict[str, Any]:
         """Run read-only commands on devices to get their real-time configuration
 
         Submit request for read-only CLIs
@@ -15352,7 +15966,8 @@ def post_dna_intent_api_v1_network_device_poller_cli_read_request(self, content_
         url = self.base_url + '/dna/intent/api/v1/network-device-poller/cli/read-request'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_access_points_factory_reset_request_provision(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_access_points_factory_reset_request_provision(self, content__type: Any) -> Dict[str, Any]:
         """Factory Reset Access Point(s)
 
         This API is used to factory reset Access Points. It is supported for maximum 100 Access Points per request. Factory reset clears all configurations from the Access Points. After factory reset the Access Point may become unreachable from the currently associated Wireless Controller and may or may not join back the same controller. 
@@ -15373,7 +15988,8 @@ def post_dna_intent_api_v1_wireless_access_points_factory_reset_request_provisio
         url = self.base_url + '/dna/intent/api/v1/wirelessAccessPoints/factoryResetRequest/provision'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_clients_query_count(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_clients_query_count(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the number of clients by applying complex filters.
 
         Retrieves the number of clients by applying complex filters. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -15398,7 +16014,8 @@ def post_dna_data_api_v1_clients_query_count(self, content__type: Any, x__c_a_l_
         url = self.base_url + '/dna/data/api/v1/clients/query/count'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_devices_not_assigned_to_site_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_devices_not_assigned_to_site_count(self) -> Dict[str, Any]:
         """Get site not assigned network devices count
 
         Get network devices count that are not assigned to any site.
@@ -15414,7 +16031,8 @@ def get_dna_intent_api_v1_network_devices_not_assigned_to_site_count(self) -> Di
         url = self.base_url + '/dna/intent/api/v1/networkDevices/notAssignedToSite/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_system_api_v1_role_role_id(self, role_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_system_api_v1_role_role_id(self, role_id: Any) -> Dict[str, Any]:
         """Delete role API
 
         Delete a role in Cisco DNA Center System
@@ -15434,7 +16052,8 @@ def delete_dna_system_api_v1_role_role_id(self, role_id: Any) -> Dict[str, Any]:
         url = url.format(role_id=role_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_serial_number_serial_number(self, serial_number: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_serial_number_serial_number(self, serial_number: Any) -> Dict[str, Any]:
         """Get Device by Serial number
 
         Returns the network device with given serial number
@@ -15454,7 +16073,8 @@ def get_dna_intent_api_v1_network_device_serial_number_serial_number(self, seria
         url = url.format(serial_number=serial_number)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_applications_count(self, scalable_group_type: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_applications_count(self, scalable_group_type: Any) -> Dict[str, Any]:
         """Get Application Count
 
         Get the number of all existing applications
@@ -15476,7 +16096,8 @@ def get_dna_intent_api_v2_applications_count(self, scalable_group_type: Any) -> 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_data_reports_report_id_executions_execution_id(self, report_id: Any, execution_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_data_reports_report_id_executions_execution_id(self, report_id: Any, execution_id: Any) -> Dict[str, Any]:
         """Download report content
 
         Returns report content. Save the response to a file by converting the response data as a blob and setting the file format available from content-disposition response header.
@@ -15497,7 +16118,8 @@ def get_dna_intent_api_v1_data_reports_report_id_executions_execution_id(self, r
         url = url.format(report_id=report_id, execution_id=execution_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_maps_import_start(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_maps_import_start(self, content__type: Any) -> Dict[str, Any]:
         """Import Map Archive - Start Import
 
         Initiates a map archive import of a tar.gz file.  The archive must consist of one xmlDir/MapsImportExport.xml map descriptor file, and 1 or more images for the map areas nested under /images folder.
@@ -15518,7 +16140,8 @@ def post_dna_intent_api_v1_maps_import_start(self, content__type: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/maps/import/start'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_device_count(self, serial_number: Optional[Any] = None, state: Optional[Any] = None, onb_state: Optional[Any] = None, name: Optional[Any] = None, pid: Optional[Any] = None, source: Optional[Any] = None, workflow_id: Optional[Any] = None, workflow_name: Optional[Any] = None, smart_account_id: Optional[Any] = None, virtual_account_id: Optional[Any] = None, last_contact: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_device_count(self, serial_number: Optional[Any] = None, state: Optional[Any] = None, onb_state: Optional[Any] = None, name: Optional[Any] = None, pid: Optional[Any] = None, source: Optional[Any] = None, workflow_id: Optional[Any] = None, workflow_name: Optional[Any] = None, smart_account_id: Optional[Any] = None, virtual_account_id: Optional[Any] = None, last_contact: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Count
 
         Returns the device count based on filter criteria. This is useful for pagination
@@ -15560,7 +16183,8 @@ def get_dna_intent_api_v1_onboarding_pnp_device_count(self, serial_number: Optio
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_event_artifact_count(self) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_event_artifact_count(self) -> Dict[str, Any]:
         """EventArtifact Count
 
         Get the count of registered event artifacts.
@@ -15576,7 +16200,8 @@ def get_dna_system_api_v1_event_artifact_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/event/artifact/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device_claim(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device_claim(self, content__type: Any) -> Dict[str, Any]:
         """Claim Device
 
         Claims one of more devices with specified workflow
@@ -15597,7 +16222,8 @@ def post_dna_intent_api_v1_onboarding_pnp_device_claim(self, content__type: Any)
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device/claim'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_assurance_issues_resolve(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_assurance_issues_resolve(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Resolve the given lists of issues
 
         Resolves the given list of issues. The response contains the list of issues which were successfully resolved as well as the issues which are failed to resolve. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesLifecycle-1.0.0-resolved.yaml
@@ -15621,7 +16247,8 @@ def post_dna_intent_api_v1_assurance_issues_resolve(self, content__type: Any, x_
         url = self.base_url + '/dna/intent/api/v1/assuranceIssues/resolve'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_compliance_count(self, compliance_status: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_compliance_count(self, compliance_status: Optional[Any] = None) -> Dict[str, Any]:
         """Get Compliance Status Count
 
         Return Compliance Status Count
@@ -15643,7 +16270,8 @@ def get_dna_intent_api_v1_compliance_count(self, compliance_status: Optional[Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tasks(self, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, parent_id: Optional[Any] = None, root_id: Optional[Any] = None, status: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tasks(self, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, parent_id: Optional[Any] = None, root_id: Optional[Any] = None, status: Optional[Any] = None) -> Dict[str, Any]:
         """Get tasks
 
         Returns task(s) based on filter criteria
@@ -15681,7 +16309,8 @@ def get_dna_intent_api_v1_tasks(self, offset: Optional[Any] = None, limit: Optio
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_assurance_events_id_child_events(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_assurance_events_id_child_events(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get list of child events for the given wireless client event
 
         Wireless client event could have child events and this API can be used to fetch the same using parent event `id` as the input. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceEvents-1.0.0-resolved.yaml
@@ -15705,7 +16334,8 @@ def get_dna_data_api_v1_assurance_events_id_child_events(self, id: Any, x__c_a_l
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_provisioning_settings(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_provisioning_settings(self) -> Dict[str, Any]:
         """Get provisioning settings
 
         Returns provisioning settings
@@ -15721,7 +16351,8 @@ def get_dna_intent_api_v1_provisioning_settings(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/provisioningSettings'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_provisioning_settings(self, content__type: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_provisioning_settings(self, content__type: Any) -> Dict[str, Any]:
         """Set provisioning settings
 
         Sets provisioning settings
@@ -15742,7 +16373,8 @@ def put_dna_intent_api_v1_provisioning_settings(self, content__type: Any) -> Dic
         url = self.base_url + '/dna/intent/api/v1/provisioningSettings'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_site_health_summaries_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, end_time: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_site_health_summaries_count(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, end_time: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None) -> Dict[str, Any]:
         """Read site count.
 
         Get a count of sites. Use the available query parameters to get the count of a subset of sites.
@@ -15812,7 +16444,8 @@ id=6bef213c-19ca-4170-8375-b694e251101c&id=32219612-819e-4b5e-a96b-cf22aca13dd9&
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_eox_status_device_device_id(self, device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_eox_status_device_device_id(self, device_id: Any) -> Dict[str, Any]:
         """Get EoX Details Per Device
 
         Retrieves EoX details for a device 
@@ -15832,7 +16465,8 @@ def get_dna_intent_api_v1_eox_status_device_device_id(self, device_id: Any) -> D
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_nodes_config(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_nodes_config(self) -> Dict[str, Any]:
         """Cisco DNA Center Nodes Configuration Summary
 
         Provides details about the current Cisco DNA Center node configuration, such as API version, node name, NTP server, intracluster link, LACP mode, network static routes, DNS server, subnet mask, host IP, default gateway, and interface information. 
@@ -15848,7 +16482,8 @@ def get_dna_intent_api_v1_nodes_config(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/nodes-config'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_maps_import_import_context_uuid_status(self, import_context_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_maps_import_import_context_uuid_status(self, import_context_uuid: Any) -> Dict[str, Any]:
         """Import Map Archive - Import Status
 
         Gets the status of a map archive import operation. For a map archive import that has just been initiated, will provide the result of validation of the archive and a pre-import preview of what will be performed if the import is performed.  Once an import is requested to be performed, this API will give the status of the import and upon completion a post-import summary of what was performed by the operation.
@@ -15868,7 +16503,8 @@ def get_dna_intent_api_v1_maps_import_import_context_uuid_status(self, import_co
         url = url.format(import_context_uuid=import_context_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_system_api_v1_users_external_authentication(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_system_api_v1_users_external_authentication(self, content__type: Any) -> Dict[str, Any]:
         """Manage External Authentication Setting API
 
         Enable or disable external authentication on Cisco DNA Center System.
@@ -15893,7 +16529,8 @@ https://www.cisco.com/c/en/us/support/cloud-systems-management/dna-center/produc
         url = self.base_url + '/dna/system/api/v1/users/external-authentication'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_users_external_authentication(self) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_users_external_authentication(self) -> Dict[str, Any]:
         """Get External Authentication Setting API
 
         Get the External Authentication setting.
@@ -15909,7 +16546,8 @@ def get_dna_system_api_v1_users_external_authentication(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/users/external-authentication'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_id(self, id: Any) -> Dict[str, Any]:
         """Get Interface by Id
 
         Returns the interface for the given interface ID
@@ -15929,7 +16567,8 @@ def get_dna_intent_api_v1_interface_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_licenses_device_device_uuid_details(self, device_uuid: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_licenses_device_device_uuid_details(self, device_uuid: Any) -> Dict[str, Any]:
         """Device License Details
 
         Get detailed license information of a device.
@@ -15949,7 +16588,8 @@ def get_dna_intent_api_v1_licenses_device_device_uuid_details(self, device_uuid:
         url = url.format(device_uuid=device_uuid)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_interfaces_id(self, id: Any, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_interfaces_id(self, id: Any, start_time: Optional[Any] = None, end_time: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Get the interface data for the given interface id (instance Uuid) along with the statistics data
 
         Returns the interface data for the given interface instance Uuid along with the statistics data. The latest interface data in the specified start and end time range will be returned. When there is no start and end time specified returns the latest available data for the given interface Id. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-interfaces-1.0.2-resolved.yaml
@@ -15994,7 +16634,8 @@ attributes=name,description,duplexOper (multiple attributes with comma separator
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_network_device_device_id(self, device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_network_device_device_id(self, device_id: Any) -> Dict[str, Any]:
         """Get Interface info by Id
 
         Returns list of interfaces by specified device
@@ -16014,7 +16655,8 @@ def get_dna_intent_api_v1_interface_network_device_device_id(self, device_id: An
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_clients_top_n_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_clients_top_n_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the Top-N analytics data related to clients.
 
          Retrieves the top N analytics data related to clients based on the provided input data. This API facilitates obtaining insights into the top-performing or most impacted clients. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -16039,7 +16681,8 @@ def post_dna_data_api_v1_clients_top_n_analytics(self, content__type: Any, x__c_
         url = self.base_url + '/dna/data/api/v1/clients/topNAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_task_operation_operation_id_offset_limit(self, operation_id: Any, offset: Any, limit: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_task_operation_operation_id_offset_limit(self, operation_id: Any, offset: Any, limit: Any) -> Dict[str, Any]:
         """Get task by OperationId
 
         Returns root tasks associated with an Operationid
@@ -16061,7 +16704,8 @@ def get_dna_intent_api_v1_task_operation_operation_id_offset_limit(self, operati
         url = url.format(operation_id=operation_id, offset=offset, limit=limit)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_ise_integration_status(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_ise_integration_status(self) -> Dict[str, Any]:
         """Cisco ISE Server Integration Status
 
         API to check Cisco ISE server integration status.
@@ -16077,7 +16721,8 @@ def get_dna_intent_api_v1_ise_integration_status(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/ise-integration-status'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_topology_l3_topology_type(self, topology_type: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_topology_l3_topology_type(self, topology_type: Any) -> Dict[str, Any]:
         """Get L3 Topology Details
 
         Returns the Layer 3 network topology by routing protocol
@@ -16097,7 +16742,8 @@ def get_dna_intent_api_v1_topology_l3_topology_type(self, topology_type: Any) ->
         url = url.format(topology_type=topology_type)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_licenses_smart_account_smart_account_id_virtual_account_virtual_account_name_device_transfer(self, smart_account_id: Any, virtual_account_name: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_licenses_smart_account_smart_account_id_virtual_account_virtual_account_name_device_transfer(self, smart_account_id: Any, virtual_account_name: Any) -> Dict[str, Any]:
         """Change Virtual Account
 
         Transfer device(s) from one virtual account to another within same smart account.
@@ -16118,7 +16764,8 @@ def post_dna_intent_api_v1_licenses_smart_account_smart_account_id_virtual_accou
         url = url.format(smart_account_id=smart_account_id, virtual_account_name=virtual_account_name)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_security_advisory_device_device_id(self, device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_security_advisory_device_device_id(self, device_id: Any) -> Dict[str, Any]:
         """Get Advisory Device Detail
 
         Retrieves advisory device details for a device
@@ -16138,7 +16785,8 @@ def get_dna_intent_api_v1_security_advisory_device_device_id(self, device_id: An
         url = url.format(device_id=device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_system_api_v1_event_config_connector_types(self) -> Dict[str, Any]:
+
+    def get_dna_system_api_v1_event_config_connector_types(self) -> Dict[str, Any]:
         """Get Connector Types
 
         Get the list of connector types
@@ -16154,7 +16802,8 @@ def get_dna_system_api_v1_event_config_connector_types(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/system/api/v1/event/config/connector-types'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_network_devices_query(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_network_devices_query(self, content__type: Any) -> Dict[str, Any]:
         """Gets the list of Network Devices based on the provided complex filters and aggregation functions.
 
         Gets the list of Network Devices based on the provided complex filters and aggregation functions. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -16175,7 +16824,8 @@ def post_dna_data_api_v1_network_devices_query(self, content__type: Any) -> Dict
         url = self.base_url + '/dna/data/api/v1/networkDevices/query'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_tasks_id(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_tasks_id(self, id: Any) -> Dict[str, Any]:
         """Get tasks by ID
 
         Returns the task with the given ID
@@ -16195,7 +16845,8 @@ def get_dna_intent_api_v1_tasks_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_licenses_term_smart_account_smart_account_id_virtual_account_virtual_account_name(self, smart_account_id: Any, virtual_account_name: Any, device_type: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_licenses_term_smart_account_smart_account_id_virtual_account_virtual_account_name(self, smart_account_id: Any, virtual_account_name: Any, device_type: Any) -> Dict[str, Any]:
         """License Term Details
 
         Get license term details.
@@ -16220,7 +16871,8 @@ def get_dna_intent_api_v1_licenses_term_smart_account_smart_account_id_virtual_a
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sites_id_dhcp_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sites_id_dhcp_settings(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Set dhcp settings for a site
 
         Set DHCP settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the settings is unset.
@@ -16243,7 +16895,8 @@ def put_dna_intent_api_v1_sites_id_dhcp_settings(self, content__type: Any, id: A
         url = url.format(id=id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sites_id_dhcp_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sites_id_dhcp_settings(self, id: Any, inherited: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve DHCP settings for a site
 
         Retrieve DHCP settings for a site; `null` values indicate that the setting will be inherited from the parent site; empty objects (`{}`) indicate that the setting is unset at a site.
@@ -16267,7 +16920,8 @@ def get_dna_intent_api_v1_sites_id_dhcp_settings(self, id: Any, inherited: Optio
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_anycast_gateways_count(self, fabric_id: Optional[Any] = None, virtual_network_name: Optional[Any] = None, ip_pool_name: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_anycast_gateways_count(self, fabric_id: Optional[Any] = None, virtual_network_name: Optional[Any] = None, ip_pool_name: Optional[Any] = None, vlan_name: Optional[Any] = None, vlan_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get anycast gateway count
 
         Returns the count of anycast gateways that match the provided query parameters.
@@ -16297,7 +16951,8 @@ def get_dna_intent_api_v1_sda_anycast_gateways_count(self, fabric_id: Optional[A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_network_devices(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, id: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, family: Optional[Any] = None, type: Optional[Any] = None, role: Optional[Any] = None, serial_number: Optional[Any] = None, maintenance_mode: Optional[Any] = None, software_version: Optional[Any] = None, health_score: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_network_devices(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, id: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, family: Optional[Any] = None, type: Optional[Any] = None, role: Optional[Any] = None, serial_number: Optional[Any] = None, maintenance_mode: Optional[Any] = None, software_version: Optional[Any] = None, health_score: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Gets the Network Device details based on the provided query parameters.
 
         Gets the Network Device details based on the provided query parameters.  When there is no start and end time specified returns the latest device details. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -16425,7 +17080,8 @@ healthScore=good&healthScore=fair (multiple entity healthscore values with & sep
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_images_id_download(self, id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_images_id_download(self, id: Any) -> Dict[str, Any]:
         """Download the software image
 
         Initiates download of the software image from Cisco.com on the disk for the given `id`. Refer to `/dna/intent/api/v1/images` for obtaining `id`.
@@ -16445,7 +17101,8 @@ def post_dna_intent_api_v1_images_id_download(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_issues(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, mac_address: Optional[Any] = None, priority: Optional[Any] = None, issue_status: Optional[Any] = None, ai_driven: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_issues(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, site_id: Optional[Any] = None, device_id: Optional[Any] = None, mac_address: Optional[Any] = None, priority: Optional[Any] = None, issue_status: Optional[Any] = None, ai_driven: Optional[Any] = None) -> Dict[str, Any]:
         """Issues
 
         Intent API to get a list of global issues, issues for a specific device, or issue for a specific client device's MAC address.
@@ -16481,7 +17138,8 @@ def get_dna_intent_api_v1_issues(self, start_time: Optional[Any] = None, end_tim
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_tenantinfo_macaddress(self, serial_number: Optional[Any] = None, macaddress: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_tenantinfo_macaddress(self, serial_number: Optional[Any] = None, macaddress: Optional[Any] = None) -> Dict[str, Any]:
         """Get Devices registered for WSA Notification
 
         It fetches devices which are registered to receive WSA notifications. The device serial number and/or MAC address are required to be provided as query parameters.
@@ -16505,7 +17163,8 @@ def get_dna_intent_api_v1_network_device_tenantinfo_macaddress(self, serial_numb
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sites_bulk(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sites_bulk(self, content__type: Any) -> Dict[str, Any]:
         """Create sites
 
         Create area/building/floor together in bulk. If site already exist, then that will be ignored. Sites in the request payload need not to be ordered.
@@ -16526,7 +17185,8 @@ def post_dna_intent_api_v1_sites_bulk(self, content__type: Any) -> Dict[str, Any
         url = self.base_url + '/dna/intent/api/v1/sites/bulk'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface_ip_address_ip_address(self, ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface_ip_address_ip_address(self, ip_address: Any) -> Dict[str, Any]:
         """Get Interface by IP
 
         Returns list of interfaces for specified device management IP address
@@ -16546,7 +17206,8 @@ def get_dna_intent_api_v1_interface_ip_address_ip_address(self, ip_address: Any)
         url = url.format(ip_address=ip_address)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images_id_addon_images(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images_id_addon_images(self, id: Any) -> Dict[str, Any]:
         """Retrieve applicable add-on images for the given software image
 
         Retrieves the list of applicable add-on images if available for the given software image. `id` can be obtained from the response of API [ /dna/intent/api/v1/images?hasAddonImages=true ].
@@ -16566,7 +17227,8 @@ def get_dna_intent_api_v1_images_id_addon_images(self, id: Any) -> Dict[str, Any
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_clients(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, type: Optional[Any] = None, os_type: Optional[Any] = None, os_version: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, ipv4_address: Optional[Any] = None, ipv6_address: Optional[Any] = None, mac_address: Optional[Any] = None, wlc_name: Optional[Any] = None, connected_network_device_name: Optional[Any] = None, ssid: Optional[Any] = None, band: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_clients(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, type: Optional[Any] = None, os_type: Optional[Any] = None, os_version: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, ipv4_address: Optional[Any] = None, ipv6_address: Optional[Any] = None, mac_address: Optional[Any] = None, wlc_name: Optional[Any] = None, connected_network_device_name: Optional[Any] = None, ssid: Optional[Any] = None, band: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the list of clients, while also offering basic filtering and sorting capabilities.
 
         Retrieves the list of clients, while also offering basic filtering and sorting capabilities. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -16729,7 +17391,8 @@ Examples:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_eox_status_summary(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_eox_status_summary(self) -> Dict[str, Any]:
         """Get EoX Summary
 
         Retrieves EoX summary for all devices in the network
@@ -16745,7 +17408,8 @@ def get_dna_intent_api_v1_eox_status_summary(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/eox-status/summary'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits_id(self, id: Any) -> Dict[str, Any]:
         """Delete fabric device layer 3 handoff with ip transit by id
 
         Deletes a layer 3 handoff with ip transit of a fabric device by id.
@@ -16765,7 +17429,8 @@ def delete_dna_intent_api_v1_sda_fabric_devices_layer3_handoffs_ip_transits_id(s
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_diagnostics_system_performance(self, kpi: Optional[Any] = None, function: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_diagnostics_system_performance(self, kpi: Optional[Any] = None, function: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None) -> Dict[str, Any]:
         """System Performance API
 
         Retrieves the aggregated metrics (total, average or maximum) of cluster key performance indicators (KPIs), such as CPU utilization, memory utilization or network rates recorded within a specified time period. The data will be available from the past 24 hours.
@@ -16793,7 +17458,8 @@ def get_dna_intent_api_v1_diagnostics_system_performance(self, kpi: Optional[Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_assurance_events_query_count(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_assurance_events_query_count(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Count the number of events with filters
 
         API to fetch the count of assurance events for the given complex query. Please refer to the 'API Support Documentation' section to understand which fields are supported. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceEvents-1.0.0-resolved.yaml
@@ -16818,7 +17484,8 @@ def post_dna_data_api_v1_assurance_events_query_count(self, content__type: Any, 
         url = self.base_url + '/dna/data/api/v1/assuranceEvents/query/count'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_clients_id_trend_analytics(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_clients_id_trend_analytics(self, content__type: Any, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves specific client information over a specified period of time.
 
         Retrieves the time series information of a specific client by applying complex filters, aggregate functions, and grouping. The data will be grouped based on the specified trend time interval. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -16847,7 +17514,8 @@ def post_dna_data_api_v1_clients_id_trend_analytics(self, content__type: Any, id
         url = url.format(id=id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_controllers_network_device_id_managed_ap_locations_count(self, network_device_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_controllers_network_device_id_managed_ap_locations_count(self, network_device_id: Any) -> Dict[str, Any]:
         """Get Managed AP Locations Count for specific Wireless Controller
 
         Retrieves the count of Managed AP locations, including Primary Managed AP Locations, Secondary Managed AP Locations, and Anchor Managed AP Locations, associated with the specific Wireless Controller.
@@ -16867,7 +17535,8 @@ def get_dna_intent_api_v1_wireless_controllers_network_device_id_managed_ap_loca
         url = url.format(network_device_id=network_device_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_start_index_records_to_return(self, start_index: Any, records_to_return: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_start_index_records_to_return(self, start_index: Any, records_to_return: Any) -> Dict[str, Any]:
         """Get Network Device by pagination range
 
         Returns the list of network devices for the given pagination range. The maximum number of records that can be retrieved is 500
@@ -16888,7 +17557,8 @@ def get_dna_intent_api_v1_network_device_start_index_records_to_return(self, sta
         url = url.format(start_index=start_index, records_to_return=records_to_return)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_devices_id_assigned_to_site(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_devices_id_assigned_to_site(self, id: Any) -> Dict[str, Any]:
         """Get site assigned network device
 
         Get site assigned network device. The items in the list are arranged in an order that corresponds with their internal identifiers.
@@ -16908,7 +17578,8 @@ def get_dna_intent_api_v1_network_devices_id_assigned_to_site(self, id: Any) -> 
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_intent_api_v1_custom_issue_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_intent_api_v1_custom_issue_definitions_id(self, id: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get the custom issue definition for the given custom issue definition Id.
 
         Get the custom issue definition for the given custom issue definition Id. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceUserDefinedIssueAPIs-1.0.0-resolved.yaml
@@ -16932,7 +17603,8 @@ def get_intent_api_v1_custom_issue_definitions_id(self, id: Any, x__c_a_l_l_e_r_
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_interface(self, offset: Optional[Any] = None, limit: Optional[Any] = None, last_input_time: Optional[Any] = None, last_output_time: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_interface(self, offset: Optional[Any] = None, limit: Optional[Any] = None, last_input_time: Optional[Any] = None, last_output_time: Optional[Any] = None) -> Dict[str, Any]:
         """Get all interfaces
 
         Returns all available interfaces. This endpoint can return a maximum of 500 interfaces
@@ -16960,7 +17632,8 @@ def get_dna_intent_api_v1_interface(self, offset: Optional[Any] = None, limit: O
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images_id_addon_images_count(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images_id_addon_images_count(self, id: Any) -> Dict[str, Any]:
         """Returns count of add-on images
 
         Count of add-on images available for the given software image identifier, `id` can be obtained from the response of API [ /dna/intent/api/v1/images?hasAddonImages=true ].
@@ -16980,7 +17653,8 @@ def get_dna_intent_api_v1_images_id_addon_images_count(self, id: Any) -> Dict[st
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_id_wireless_info(self, id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_id_wireless_info(self, id: Any) -> Dict[str, Any]:
         """Get wireless lan controller details by Id
 
         Returns the wireless lan controller info with given device ID
@@ -17000,7 +17674,8 @@ def get_dna_intent_api_v1_network_device_id_wireless_info(self, id: Any) -> Dict
         url = url.format(id=id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_dnac_packages(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_dnac_packages(self) -> Dict[str, Any]:
         """Cisco DNA Center Packages Summary
 
         Provides information such as name, version of packages installed on the DNA center.
@@ -17016,7 +17691,8 @@ def get_dna_intent_api_v1_dnac_packages(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/dnac-packages'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_clients_summary_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_clients_summary_analytics(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves summary analytics data related to clients.
 
         Retrieves summary analytics data related to clients while applying complex filtering, aggregate functions, and grouping. This API facilitates obtaining consolidated insights into the performance and status of the clients. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -17041,7 +17717,8 @@ def post_dna_data_api_v1_clients_summary_analytics(self, content__type: Any, x__
         url = self.base_url + '/dna/data/api/v1/clients/summaryAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_rf_profiles_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_rf_profiles_count(self) -> Dict[str, Any]:
         """Get RF Profiles Count
 
         This API allows the user to get count of all RF profiles
@@ -17057,7 +17734,8 @@ def get_dna_intent_api_v1_wireless_settings_rf_profiles_count(self) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/wirelessSettings/rfProfiles/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_security_advisory_advisory_advisory_id_device(self, advisory_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_security_advisory_advisory_advisory_id_device(self, advisory_id: Any) -> Dict[str, Any]:
         """Get Devices Per Advisory
 
         Retrieves list of devices for an advisory
@@ -17077,7 +17755,8 @@ def get_dna_intent_api_v1_security_advisory_advisory_advisory_id_device(self, ad
         url = url.format(advisory_id=advisory_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_accesspoint_configuration_details_task_id(self, task_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_accesspoint_configuration_details_task_id(self, task_id: Any) -> Dict[str, Any]:
         """Get Access Point Configuration task result
 
         Users can query the access point configuration result using this intent API
@@ -17097,7 +17776,8 @@ def get_dna_intent_api_v1_wireless_accesspoint_configuration_details_task_id(sel
         url = url.format(task_id=task_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_project_importprojects(self, content__type: Any, do_version: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_project_importprojects(self, content__type: Any, do_version: Optional[Any] = None) -> Dict[str, Any]:
         """Imports the Projects provided
 
         Imports the Projects provided in the DTO
@@ -17123,7 +17803,8 @@ If this flag is false and if template already exists, then operation fails with 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_compliance_detail(self, compliance_type: Optional[Any] = None, compliance_status: Optional[Any] = None, device_uuid: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_compliance_detail(self, compliance_type: Optional[Any] = None, compliance_status: Optional[Any] = None, device_uuid: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get Compliance Detail 
 
         Return Compliance Detail 
@@ -17153,7 +17834,8 @@ def get_dna_intent_api_v1_compliance_detail(self, compliance_type: Optional[Any]
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v2_floors_id_upload_image(self, content__type: Any, id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v2_floors_id_upload_image(self, content__type: Any, id: Any) -> Dict[str, Any]:
         """Uploads floor image
 
         Uploads floor image.
@@ -17176,7 +17858,8 @@ def post_dna_intent_api_v2_floors_id_upload_image(self, content__type: Any, id: 
         url = url.format(id=id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sda_port_assignments_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sda_port_assignments_id(self, id: Any) -> Dict[str, Any]:
         """Delete port assignment by id
 
         Deletes a port assignment based on id.
@@ -17196,7 +17879,8 @@ def delete_dna_intent_api_v1_sda_port_assignments_id(self, id: Any) -> Dict[str,
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids_count(self, content__type: Any, fabric_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids_count(self, content__type: Any, fabric_id: Any) -> Dict[str, Any]:
         """Returns the count of VLANs mapped to SSIDs in a Fabric Site.
 
         Returns the count of VLANs mapped to SSIDs in a Fabric Site. The 'fabricId' represents the Fabric ID of a particular Fabric Site.
@@ -17219,7 +17903,8 @@ def get_dna_intent_api_v1_sda_fabrics_fabric_id_vlan_to_ssids_count(self, conten
         url = url.format(fabric_id=fabric_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_global_credential(self, credential_sub_type: Any, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_global_credential(self, credential_sub_type: Any, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Global credentials
 
         Returns global credential for the given credential sub type
@@ -17245,7 +17930,8 @@ def get_dna_intent_api_v1_global_credential(self, credential_sub_type: Any, sort
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_assurance_issues_trend_analytics(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_assurance_issues_trend_analytics(self, content__type: Any, accept__language: Optional[Any] = None, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Get trend analytics data of issues
 
         Gets the trend analytics data related to issues based on given filters and group by field. This data can be used to find issue counts in different intervals over a period of time. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-IssuesList-1.0.0-resolved.yaml
@@ -17272,7 +17958,8 @@ def post_dna_data_api_v1_assurance_issues_trend_analytics(self, content__type: A
         url = self.base_url + '/dna/data/api/v1/assuranceIssues/trendAnalytics'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_compliance(self, compliance_status: Optional[Any] = None, device_uuid: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_compliance(self, compliance_status: Optional[Any] = None, device_uuid: Optional[Any] = None) -> Dict[str, Any]:
         """Get Compliance Status 
 
         Return compliance status of device(s).
@@ -17296,7 +17983,8 @@ def get_dna_intent_api_v1_compliance(self, compliance_status: Optional[Any] = No
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_dna_event_snmp_config(self, config_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_dna_event_snmp_config(self, config_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get SNMP Destination
 
         Get SNMP Destination
@@ -17326,7 +18014,8 @@ def get_dna_intent_api_v1_dna_event_snmp_config(self, config_id: Optional[Any] =
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_image_activation_device(self, content__type: Any, client__type: Optional[Any] = None, client__url: Optional[Any] = None, schedule_validate: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_image_activation_device(self, content__type: Any, client__type: Optional[Any] = None, client__url: Optional[Any] = None, schedule_validate: Optional[Any] = None) -> Dict[str, Any]:
         """Trigger software image activation
 
         Activates a software image on a given device. Software image must be present in the device flash
@@ -17357,7 +18046,8 @@ def post_dna_intent_api_v1_image_activation_device(self, content__type: Any, cli
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sda_provision_devices_count(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sda_provision_devices_count(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Provisioned Devices count
 
         Returns the count of provisioned devices based on query parameters.
@@ -17380,7 +18070,8 @@ def get_dna_intent_api_v1_sda_provision_devices_count(self, site_id: Optional[An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images(self, site_id: Optional[Any] = None, product_name_ordinal: Optional[Any] = None, supervisor_product_name_ordinal: Optional[Any] = None, imported: Optional[Any] = None, name: Optional[Any] = None, version: Optional[Any] = None, golden: Optional[Any] = None, integrity: Optional[Any] = None, has_addon_images: Optional[Any] = None, is_addon_images: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images(self, site_id: Optional[Any] = None, product_name_ordinal: Optional[Any] = None, supervisor_product_name_ordinal: Optional[Any] = None, imported: Optional[Any] = None, name: Optional[Any] = None, version: Optional[Any] = None, golden: Optional[Any] = None, integrity: Optional[Any] = None, has_addon_images: Optional[Any] = None, is_addon_images: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Returns list of software images
 
         A list of available images for the specified site is provided. The default value of the site is set to global. The list includes images that have been imported onto the disk, as well as the latest and suggested images from Cisco.com. 
@@ -17424,7 +18115,8 @@ def get_dna_intent_api_v1_images(self, site_id: Optional[Any] = None, product_na
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_settings_interfaces_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_settings_interfaces_count(self) -> Dict[str, Any]:
         """Get Interfaces Count
 
         This API allows the user to get count of all interfaces
@@ -17440,7 +18132,8 @@ def get_dna_intent_api_v1_wireless_settings_interfaces_count(self) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/wirelessSettings/interfaces/count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_mobility_reset(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_mobility_reset(self, content__type: Any) -> Dict[str, Any]:
         """Mobility Reset
 
         This API is used to reset wireless mobility which in turn sets mobility group name as 'default'
@@ -17461,7 +18154,8 @@ def post_dna_intent_api_v1_wireless_controllers_wireless_mobility_groups_mobilit
         url = self.base_url + '/dna/intent/api/v1/wirelessControllers/wirelessMobilityGroups/mobilityReset'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_site_health_summaries(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_site_health_summaries(self, x__c_a_l_l_e_r__i_d: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, limit: Optional[Any] = None, offset: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_type: Optional[Any] = None, id: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Read list of site health summaries.
 
         Get a paginated list of site health summaries. Use the available query parameters to identify a subset of sites you want health summaries for.
@@ -17587,7 +18281,8 @@ attribute=siteHierarchy&attribute=clientCount (multiple attributes requested)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_device(self, limit: Optional[Any] = None, offset: Optional[Any] = None, sort: Optional[Any] = None, sort_order: Optional[Any] = None, serial_number: Optional[Any] = None, state: Optional[Any] = None, onb_state: Optional[Any] = None, name: Optional[Any] = None, pid: Optional[Any] = None, source: Optional[Any] = None, workflow_id: Optional[Any] = None, workflow_name: Optional[Any] = None, smart_account_id: Optional[Any] = None, virtual_account_id: Optional[Any] = None, last_contact: Optional[Any] = None, mac_address: Optional[Any] = None, hostname: Optional[Any] = None, site_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_device(self, limit: Optional[Any] = None, offset: Optional[Any] = None, sort: Optional[Any] = None, sort_order: Optional[Any] = None, serial_number: Optional[Any] = None, state: Optional[Any] = None, onb_state: Optional[Any] = None, name: Optional[Any] = None, pid: Optional[Any] = None, source: Optional[Any] = None, workflow_id: Optional[Any] = None, workflow_name: Optional[Any] = None, smart_account_id: Optional[Any] = None, virtual_account_id: Optional[Any] = None, last_contact: Optional[Any] = None, mac_address: Optional[Any] = None, hostname: Optional[Any] = None, site_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device list
 
         Returns list of devices from Plug & Play based on filter criteria. Returns 50 devices by default. This endpoint supports Pagination and Sorting.
@@ -17643,7 +18338,8 @@ def get_dna_intent_api_v1_onboarding_pnp_device(self, limit: Optional[Any] = Non
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_onboarding_pnp_device(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_onboarding_pnp_device(self, content__type: Any) -> Dict[str, Any]:
         """Add Device
 
         Adds a device to the PnP database.
@@ -17664,7 +18360,8 @@ def post_dna_intent_api_v1_onboarding_pnp_device(self, content__type: Any) -> Di
         url = self.base_url + '/dna/intent/api/v1/onboarding/pnp-device'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_data_api_v1_clients_query(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_data_api_v1_clients_query(self, content__type: Any, x__c_a_l_l_e_r__i_d: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the list of clients by applying complex filters while also supporting aggregate attributes.
 
         Retrieves the list of clients by applying complex filters while also supporting aggregate attributes. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-clients1-1.0.0-resolved.yaml
@@ -17689,7 +18386,8 @@ def post_dna_data_api_v1_clients_query(self, content__type: Any, x__c_a_l_l_e_r_
         url = self.base_url + '/dna/data/api/v1/clients/query'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_task(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, data: Optional[Any] = None, error_code: Optional[Any] = None, service_type: Optional[Any] = None, username: Optional[Any] = None, progress: Optional[Any] = None, is_error: Optional[Any] = None, failure_reason: Optional[Any] = None, parent_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_task(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, data: Optional[Any] = None, error_code: Optional[Any] = None, service_type: Optional[Any] = None, username: Optional[Any] = None, progress: Optional[Any] = None, is_error: Optional[Any] = None, failure_reason: Optional[Any] = None, parent_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get tasks
 
         Returns task(s) based on filter criteria
@@ -17737,7 +18435,8 @@ def get_dna_intent_api_v1_task(self, start_time: Optional[Any] = None, end_time:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_module(self, device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None, name_list: Optional[Any] = None, vendor_equipment_type_list: Optional[Any] = None, part_number_list: Optional[Any] = None, operational_state_code_list: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_module(self, device_id: Any, limit: Optional[Any] = None, offset: Optional[Any] = None, name_list: Optional[Any] = None, vendor_equipment_type_list: Optional[Any] = None, part_number_list: Optional[Any] = None, operational_state_code_list: Optional[Any] = None) -> Dict[str, Any]:
         """Get Modules
 
         Returns modules by specified device id
@@ -17771,7 +18470,8 @@ def get_dna_intent_api_v1_network_device_module(self, device_id: Any, limit: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_images_image_id_site_wise_product_names_count(self, image_id: Any, product_name: Optional[Any] = None, product_id: Optional[Any] = None, recommended: Optional[Any] = None, assigned: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_images_image_id_site_wise_product_names_count(self, image_id: Any, product_name: Optional[Any] = None, product_id: Optional[Any] = None, recommended: Optional[Any] = None, assigned: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieves the count of assigned network device products
 
         Returns count of assigned network device product for a given image identifier. Refer `/dna/intent/api/v1/images` API for obtaining `imageId`
@@ -17801,7 +18501,8 @@ def get_dna_intent_api_v1_images_image_id_site_wise_product_names_count(self, im
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_subscription_details_rest(self, name: Optional[Any] = None, instance_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_subscription_details_rest(self, name: Optional[Any] = None, instance_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, sort_by: Optional[Any] = None, order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Rest/Webhook Subscription Details
 
         Gets the list of subscription details for specified connectorType
@@ -17833,7 +18534,8 @@ def get_dna_intent_api_v1_event_subscription_details_rest(self, name: Optional[A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_onboarding_pnp_device_history(self, serial_number: Any, sort: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_onboarding_pnp_device_history(self, serial_number: Any, sort: Optional[Any] = None, sort_order: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device History
 
         Returns history for a specific device. Serial number is a required parameter
@@ -17859,7 +18561,8 @@ def get_dna_intent_api_v1_onboarding_pnp_device_history(self, serial_number: Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_app_policy_queuing_profile_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_app_policy_queuing_profile_count(self) -> Dict[str, Any]:
         """Get Application Policy Queuing Profile Count
 
         Get the number of all existing  application policy queuing profile
@@ -17875,7 +18578,8 @@ def get_dna_intent_api_v1_app_policy_queuing_profile_count(self) -> Dict[str, An
         url = self.base_url + '/dna/intent/api/v1/app-policy-queuing-profile-count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_data_api_v1_network_devices_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, id: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, family: Optional[Any] = None, type: Optional[Any] = None, role: Optional[Any] = None, serial_number: Optional[Any] = None, maintenance_mode: Optional[Any] = None, software_version: Optional[Any] = None, health_score: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_data_api_v1_network_devices_count(self, start_time: Optional[Any] = None, end_time: Optional[Any] = None, id: Optional[Any] = None, site_hierarchy: Optional[Any] = None, site_hierarchy_id: Optional[Any] = None, site_id: Optional[Any] = None, management_ip_address: Optional[Any] = None, mac_address: Optional[Any] = None, family: Optional[Any] = None, type: Optional[Any] = None, role: Optional[Any] = None, serial_number: Optional[Any] = None, maintenance_mode: Optional[Any] = None, software_version: Optional[Any] = None, health_score: Optional[Any] = None, view: Optional[Any] = None, attribute: Optional[Any] = None) -> Dict[str, Any]:
         """Gets the total Network device counts based on the provided query parameters.
 
         Gets the total Network device counts. When there is no start and end time specified returns the latest interfaces total count. For detailed information about the usage of the API, please refer to the Open API specification document - https://github.com/cisco-en-programmability/catalyst-center-api-specs/blob/main/Assurance/CE_Cat_Center_Org-AssuranceNetworkDevices-1.0.2-resolved.yaml
@@ -17985,7 +18689,8 @@ softwareVersion=17.9.3.23&softwareVersion=17.7.1.2&softwareVersion=*.17.7 (multi
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_template_programmer_template_version(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_template_programmer_template_version(self, content__type: Any) -> Dict[str, Any]:
         """Version Template
 
         API to version the current contents of the template.
@@ -18006,7 +18711,8 @@ def post_dna_intent_api_v1_template_programmer_template_version(self, content__t
         url = self.base_url + '/dna/intent/api/v1/template-programmer/template/version'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_task_task_id_tree(self, task_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_task_task_id_tree(self, task_id: Any) -> Dict[str, Any]:
         """Get task tree
 
         Returns a task with its children tasks by based on their id
@@ -18026,7 +18732,8 @@ def get_dna_intent_api_v1_task_task_id_tree(self, task_id: Any) -> Dict[str, Any
         url = url.format(task_id=task_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_discovery_id_network_device(self, id: Any, task_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_discovery_id_network_device(self, id: Any, task_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Discovered network devices by discovery Id
 
         Returns the network devices discovered for the given Discovery ID. Discovery ID can be obtained using the "Get Discoveries by range" API.
@@ -18050,7 +18757,8 @@ def get_dna_intent_api_v1_discovery_id_network_device(self, id: Any, task_id: Op
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_compliance(self, content__type: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_compliance(self, content__type: Any) -> Dict[str, Any]:
         """Run Compliance
 
         Run compliance check for device(s).
@@ -18071,7 +18779,8 @@ def post_dna_intent_api_v1_compliance(self, content__type: Any) -> Dict[str, Any
         url = self.base_url + '/dna/intent/api/v1/compliance/'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_event_api_status_execution_id(self, execution_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_event_api_status_execution_id(self, execution_id: Any) -> Dict[str, Any]:
         """Get Status API for Events
 
         Get the Status of events API calls with provided executionId as mandatory path parameter
@@ -18091,7 +18800,8 @@ def get_dna_intent_api_v1_event_api_status_execution_id(self, execution_id: Any)
         url = url.format(execution_id=execution_id)
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_maps_export_site_hierarchy_uuid(self, content__type: Any, site_hierarchy_uuid: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_maps_export_site_hierarchy_uuid(self, content__type: Any, site_hierarchy_uuid: Any) -> Dict[str, Any]:
         """Export Map Archive
 
         Allows exporting a Map archive in an XML interchange format along with the associated images. 
@@ -18114,7 +18824,8 @@ def post_dna_intent_api_v1_maps_export_site_hierarchy_uuid(self, content__type: 
         url = url.format(site_hierarchy_uuid=site_hierarchy_uuid)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_devices_assigned_to_site_count(self, site_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_devices_assigned_to_site_count(self, site_id: Any) -> Dict[str, Any]:
         """Get site assigned network devices count
 
         Get all network devices count under the given site in the network hierarchy.
@@ -18136,7 +18847,8 @@ def get_dna_intent_api_v1_network_devices_assigned_to_site_count(self, site_id: 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v2_network(self, site_id: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v2_network(self, site_id: Any) -> Dict[str, Any]:
         """Get Network V2
 
         API to get SNMP, NTP, Network AAA, Client and Endpoint AAA, and/or DNS center server settings.
@@ -18158,7 +18870,8 @@ def get_dna_intent_api_v2_network(self, site_id: Any) -> Dict[str, Any]:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network_device_autocomplete(self, vrf_name: Optional[Any] = None, management_ip_address: Optional[Any] = None, hostname: Optional[Any] = None, mac_address: Optional[Any] = None, family: Optional[Any] = None, collection_status: Optional[Any] = None, collection_interval: Optional[Any] = None, software_version: Optional[Any] = None, software_type: Optional[Any] = None, reachability_status: Optional[Any] = None, reachability_failure_reason: Optional[Any] = None, error_code: Optional[Any] = None, platform_id: Optional[Any] = None, series: Optional[Any] = None, type: Optional[Any] = None, serial_number: Optional[Any] = None, up_time: Optional[Any] = None, role: Optional[Any] = None, role_source: Optional[Any] = None, associated_wlc_ip: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network_device_autocomplete(self, vrf_name: Optional[Any] = None, management_ip_address: Optional[Any] = None, hostname: Optional[Any] = None, mac_address: Optional[Any] = None, family: Optional[Any] = None, collection_status: Optional[Any] = None, collection_interval: Optional[Any] = None, software_version: Optional[Any] = None, software_type: Optional[Any] = None, reachability_status: Optional[Any] = None, reachability_failure_reason: Optional[Any] = None, error_code: Optional[Any] = None, platform_id: Optional[Any] = None, series: Optional[Any] = None, type: Optional[Any] = None, serial_number: Optional[Any] = None, up_time: Optional[Any] = None, role: Optional[Any] = None, role_source: Optional[Any] = None, associated_wlc_ip: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Values that match fully or partially an Attribute
 
         Returns the list of values of the first given required parameter. You can use the .* in any value to conduct a wildcard search.
@@ -18224,7 +18937,8 @@ It will return the device management IP addresses that match fully or partially 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_sensor(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_sensor(self) -> Dict[str, Any]:
         """Create sensor test template
 
         Intent API to create a SENSOR test template with a new SSID, existing SSID, or both new and existing SSID
@@ -18240,7 +18954,8 @@ def post_dna_intent_api_v1_sensor(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/sensor'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sensor(self, template_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sensor(self, template_name: Any) -> Dict[str, Any]:
         """Delete sensor test
 
         Intent API to delete an existing SENSOR test template
@@ -18262,7 +18977,8 @@ def delete_dna_intent_api_v1_sensor(self, template_name: Any) -> Dict[str, Any]:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_sensor(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_sensor(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Sensors
 
         Intent API to get a list of SENSOR devices
@@ -18284,7 +19000,8 @@ def get_dna_intent_api_v1_sensor(self, site_id: Optional[Any] = None) -> Dict[st
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Get device info from SDA Fabric
 
         Get device info from SDA Fabric
@@ -18306,7 +19023,8 @@ def get_dna_intent_api_v1_business_sda_device(self, device_management_ip_address
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_hostonboarding_access_point(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_hostonboarding_access_point(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
         """Delete Port assignment for access point in SDA Fabric
 
         Delete Port assignment for access point in SDA Fabric
@@ -18330,7 +19048,8 @@ def delete_dna_intent_api_v1_business_sda_hostonboarding_access_point(self, devi
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_hostonboarding_access_point(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_hostonboarding_access_point(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
         """Get Port assignment for access point in SDA Fabric
 
         Get Port assignment for access point in SDA Fabric
@@ -18354,7 +19073,8 @@ def get_dna_intent_api_v1_business_sda_hostonboarding_access_point(self, device_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_hostonboarding_access_point(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_hostonboarding_access_point(self) -> Dict[str, Any]:
         """Add Port assignment for access point in SDA Fabric
 
         Add Port assignment for access point in SDA Fabric
@@ -18370,7 +19090,8 @@ def post_dna_intent_api_v1_business_sda_hostonboarding_access_point(self) -> Dic
         url = self.base_url + '/dna/intent/api/v1/business/sda/hostonboarding/access-point'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_wireless_controller(self, device_i_p_address: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_wireless_controller(self, device_i_p_address: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Remove WLC from Fabric Domain
 
         Remove WLC from Fabric Domain
@@ -18395,7 +19116,8 @@ def delete_dna_intent_api_v1_business_sda_wireless_controller(self, device_i_p_a
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_wireless_controller(self, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_wireless_controller(self, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Add WLC to Fabric Domain
 
         Add WLC to Fabric Domain
@@ -18416,7 +19138,8 @@ def post_dna_intent_api_v1_business_sda_wireless_controller(self, persistbapiout
         url = self.base_url + '/dna/intent/api/v1/business/sda/wireless-controller'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self) -> Dict[str, Any]:
         """Add IP Pool in SDA Virtual Network
 
         Add IP Pool in SDA Virtual Network
@@ -18432,7 +19155,8 @@ def post_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/business/sda/virtualnetwork/ippool'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self, site_name_hierarchy: Any, virtual_network_name: Any, ip_pool_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self, site_name_hierarchy: Any, virtual_network_name: Any, ip_pool_name: Any) -> Dict[str, Any]:
         """Delete IP Pool from SDA Virtual Network
 
         Delete IP Pool from SDA Virtual Network
@@ -18458,7 +19182,8 @@ def delete_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self, site_name_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self, site_name_hierarchy: Any, virtual_network_name: Any, ip_pool_name: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self, site_name_hierarchy: Any, virtual_network_name: Any, ip_pool_name: Any) -> Dict[str, Any]:
         """Get IP Pool from SDA Virtual Network
 
         Get IP Pool from SDA Virtual Network
@@ -18484,7 +19209,8 @@ def get_dna_intent_api_v1_business_sda_virtualnetwork_ippool(self, site_name_hie
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_edge_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_edge_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Delete edge device from SDA Fabric
 
         Delete edge device from SDA Fabric.
@@ -18506,7 +19232,8 @@ def delete_dna_intent_api_v1_business_sda_edge_device(self, device_management_ip
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_edge_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_edge_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Get edge device from SDA Fabric
 
         Get edge device from SDA Fabric
@@ -18528,7 +19255,8 @@ def get_dna_intent_api_v1_business_sda_edge_device(self, device_management_ip_ad
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_edge_device(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_edge_device(self) -> Dict[str, Any]:
         """Add edge device in SDA Fabric
 
         Add edge device in SDA Fabric
@@ -18544,7 +19272,8 @@ def post_dna_intent_api_v1_business_sda_edge_device(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/business/sda/edge-device'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_multicast(self, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_multicast(self, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Delete multicast from SDA fabric
 
         Delete multicast from SDA fabric
@@ -18566,7 +19295,8 @@ def delete_dna_intent_api_v1_business_sda_multicast(self, site_name_hierarchy: A
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_multicast(self, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_multicast(self, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Get multicast details from SDA fabric
 
         Get multicast details from SDA fabric
@@ -18588,7 +19318,8 @@ def get_dna_intent_api_v1_business_sda_multicast(self, site_name_hierarchy: Any)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_multicast(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_multicast(self) -> Dict[str, Any]:
         """Add multicast in SDA fabric
 
         Add multicast in SDA fabric
@@ -18604,7 +19335,8 @@ def post_dna_intent_api_v1_business_sda_multicast(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/business/sda/multicast'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_applications(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_applications(self) -> Dict[str, Any]:
         """Edit Application
 
         Edit the attributes of an existing application
@@ -18620,7 +19352,8 @@ def put_dna_intent_api_v1_applications(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/applications'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_applications(self, offset: Optional[Any] = None, limit: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_applications(self, offset: Optional[Any] = None, limit: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Applications
 
         Get applications by offset/limit or by name
@@ -18646,7 +19379,8 @@ def get_dna_intent_api_v1_applications(self, offset: Optional[Any] = None, limit
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_applications(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_applications(self, id: Any) -> Dict[str, Any]:
         """Delete Application
 
         Delete existing application by its id
@@ -18668,7 +19402,8 @@ def delete_dna_intent_api_v1_applications(self, id: Any) -> Dict[str, Any]:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_applications(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_applications(self) -> Dict[str, Any]:
         """Create Application
 
         Create new Custom application
@@ -18684,7 +19419,8 @@ def post_dna_intent_api_v1_applications(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/applications'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_rf_profile(self, rf_profile_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_rf_profile(self, rf_profile_name: Optional[Any] = None) -> Dict[str, Any]:
         """Retrieve RF profiles
 
         Retrieve all RF profiles
@@ -18706,7 +19442,8 @@ def get_dna_intent_api_v1_wireless_rf_profile(self, rf_profile_name: Optional[An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_rf_profile(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_rf_profile(self) -> Dict[str, Any]:
         """Create or Update RF profile
 
         Create or Update RF profile
@@ -18722,7 +19459,8 @@ def post_dna_intent_api_v1_wireless_rf_profile(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/wireless/rf-profile'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_network(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_network(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Network
 
         API to get  DHCP and DNS center server details.
@@ -18744,7 +19482,8 @@ def get_dna_intent_api_v1_network(self, site_id: Optional[Any] = None) -> Dict[s
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_reserve_ip_subpool(self, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, ignore_inherited_groups: Optional[Any] = None, pool_usage: Optional[Any] = None, group_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_reserve_ip_subpool(self, site_id: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, ignore_inherited_groups: Optional[Any] = None, pool_usage: Optional[Any] = None, group_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Reserve IP Subpool
 
         API to get the ip subpool info.
@@ -18776,7 +19515,8 @@ def get_dna_intent_api_v1_reserve_ip_subpool(self, site_id: Optional[Any] = None
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_transit_peer_network(self, transit_peer_network_name: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_transit_peer_network(self, transit_peer_network_name: Any) -> Dict[str, Any]:
         """Get Transit Peer Network Info
 
         Get Transit Peer Network Info from SD-Access
@@ -18798,7 +19538,8 @@ def get_dna_intent_api_v1_business_sda_transit_peer_network(self, transit_peer_n
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_transit_peer_network(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_transit_peer_network(self) -> Dict[str, Any]:
         """Add Transit Peer Network
 
         Add Transit Peer Network in SD-Access
@@ -18814,7 +19555,8 @@ def post_dna_intent_api_v1_business_sda_transit_peer_network(self) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/business/sda/transit-peer-network'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_transit_peer_network(self, transit_peer_network_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_transit_peer_network(self, transit_peer_network_name: Any) -> Dict[str, Any]:
         """Delete Transit Peer Network
 
         Delete Transit Peer Network from SD-Access
@@ -18836,7 +19578,8 @@ def delete_dna_intent_api_v1_business_sda_transit_peer_network(self, transit_pee
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_client_proximity(self, username: Any, number_days: Optional[Any] = None, time_resolution: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_client_proximity(self, username: Any, number_days: Optional[Any] = None, time_resolution: Optional[Any] = None) -> Dict[str, Any]:
         """Client Proximity
 
         This intent API will provide client proximity information for a specific wireless user. Proximity is defined as presence on the same floor at the same time as the specified wireless user. The Proximity workflow requires the subscription to the following event (via the Event Notification workflow) prior to making this API call: NETWORK-CLIENTS-3-506 - Client Proximity Report.
@@ -18862,7 +19605,8 @@ def get_dna_intent_api_v1_client_proximity(self, username: Any, number_days: Opt
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_device_credential_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_device_credential_id(self, id: Any) -> Dict[str, Any]:
         """Delete Device Credential
 
         Delete device credential. This API has been deprecated and will not be available in a Cisco DNA Center release after August 1st 2024 23:59:59 GMT. Please refer new Intent API : Delete Global Credentials V2
@@ -18882,7 +19626,8 @@ def delete_dna_intent_api_v1_device_credential_id(self, id: Any) -> Dict[str, An
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_sp_profile_sp_profile_name(self, sp_profile_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_sp_profile_sp_profile_name(self, sp_profile_name: Any) -> Dict[str, Any]:
         """Delete SP Profile
 
         API to delete Service Provider Profile (QoS).
@@ -18902,7 +19647,8 @@ def delete_dna_intent_api_v1_sp_profile_sp_profile_name(self, sp_profile_name: A
         url = url.format(sp_profile_name=sp_profile_name)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_application_health(self, site_id: Optional[Any] = None, device_id: Optional[Any] = None, mac_address: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, application_health: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, application_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_application_health(self, site_id: Optional[Any] = None, device_id: Optional[Any] = None, mac_address: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, application_health: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None, application_name: Optional[Any] = None) -> Dict[str, Any]:
         """Applications
 
         Intent API to get a list of applications for a specific site, a device, or a client device's MAC address. For a combination of a specific application with site and/or device the API gets list of issues/devices/endpoints.
@@ -18940,7 +19686,8 @@ def get_dna_intent_api_v1_application_health(self, site_id: Optional[Any] = None
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_application_policy_application_set(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_application_policy_application_set(self) -> Dict[str, Any]:
         """Create Application Set
 
         Create new custom application-set/s
@@ -18956,7 +19703,8 @@ def post_dna_intent_api_v1_application_policy_application_set(self) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/application-policy-application-set'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_application_policy_application_set(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_application_policy_application_set(self, id: Any) -> Dict[str, Any]:
         """Delete Application Set
 
         Delete existing application-set by it's id
@@ -18978,7 +19726,8 @@ def delete_dna_intent_api_v1_application_policy_application_set(self, id: Any) -
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_application_policy_application_set(self, offset: Optional[Any] = None, limit: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_application_policy_application_set(self, offset: Optional[Any] = None, limit: Optional[Any] = None, name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Application Sets
 
         Get appllication-sets by offset/limit or by name
@@ -19004,7 +19753,8 @@ def get_dna_intent_api_v1_application_policy_application_set(self, offset: Optio
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_applications_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_applications_count(self) -> Dict[str, Any]:
         """Get Applications Count
 
         Get the number of all existing applications
@@ -19020,7 +19770,8 @@ def get_dna_intent_api_v1_applications_count(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/applications-count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_global_pool_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_global_pool_id(self, id: Any) -> Dict[str, Any]:
         """Delete Global IP Pool
 
         API to delete global IP pool.
@@ -19040,7 +19791,8 @@ def delete_dna_intent_api_v1_global_pool_id(self, id: Any) -> Dict[str, Any]:
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_global_pool(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_global_pool(self) -> Dict[str, Any]:
         """Update Global Pool
 
         API to update global pool
@@ -19056,7 +19808,8 @@ def put_dna_intent_api_v1_global_pool(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/global-pool'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_global_pool(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_global_pool(self, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get Global Pool
 
         API to get the global pool.
@@ -19080,7 +19833,8 @@ def get_dna_intent_api_v1_global_pool(self, offset: Optional[Any] = None, limit:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_global_pool(self, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_global_pool(self, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Create Global Pool
 
         API to create global pool.
@@ -19101,7 +19855,8 @@ def post_dna_intent_api_v1_global_pool(self, persistbapioutput: Optional[Any] = 
         url = self.base_url + '/dna/intent/api/v1/global-pool'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_ssid(self, persistbapioutput: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_ssid(self, persistbapioutput: Any) -> Dict[str, Any]:
         """Create and Provision SSID
 
         Creates SSID, updates the SSID to the corresponding site profiles and provision it to the devices matching the given sites
@@ -19122,7 +19877,8 @@ def post_dna_intent_api_v1_business_ssid(self, persistbapioutput: Any) -> Dict[s
         url = self.base_url + '/dna/intent/api/v1/business/ssid'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_wireless_rf_profile_rf_profile_name(self, rf_profile_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_wireless_rf_profile_rf_profile_name(self, rf_profile_name: Any) -> Dict[str, Any]:
         """Delete RF profiles
 
         Delete RF profile
@@ -19142,7 +19898,8 @@ def delete_dna_intent_api_v1_wireless_rf_profile_rf_profile_name(self, rf_profil
         url = url.format(rf_profile_name=rf_profile_name)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_virtual_network(self, virtual_network_name: Any, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_virtual_network(self, virtual_network_name: Any, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Get VN from SDA Fabric
 
         Get virtual network (VN) from SDA Fabric
@@ -19166,7 +19923,8 @@ def get_dna_intent_api_v1_business_sda_virtual_network(self, virtual_network_nam
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_virtual_network(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_virtual_network(self) -> Dict[str, Any]:
         """Add VN in fabric
 
         Add virtual network (VN) in SDA Fabric	
@@ -19182,7 +19940,8 @@ def post_dna_intent_api_v1_business_sda_virtual_network(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/business/sda/virtual-network'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_virtual_network(self, virtual_network_name: Any, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_virtual_network(self, virtual_network_name: Any, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Delete VN from SDA Fabric
 
         Delete virtual network (VN) from SDA Fabric	
@@ -19206,7 +19965,8 @@ def delete_dna_intent_api_v1_business_sda_virtual_network(self, virtual_network_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_authentication_profile(self, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_authentication_profile(self, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Delete default authentication profile from SDA Fabric
 
         Delete default authentication profile in SDA Fabric
@@ -19228,7 +19988,8 @@ def delete_dna_intent_api_v1_business_sda_authentication_profile(self, site_name
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_business_sda_authentication_profile(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_business_sda_authentication_profile(self) -> Dict[str, Any]:
         """Update default authentication profile in SDA Fabric
 
         Update default authentication profile in SDA Fabric
@@ -19244,7 +20005,8 @@ def put_dna_intent_api_v1_business_sda_authentication_profile(self) -> Dict[str,
         url = self.base_url + '/dna/intent/api/v1/business/sda/authentication-profile'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_authentication_profile(self, site_name_hierarchy: Any, authenticate_template_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_authentication_profile(self, site_name_hierarchy: Any, authenticate_template_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get default authentication profile from SDA Fabric
 
         Get default authentication profile from SDA Fabric
@@ -19268,7 +20030,8 @@ def get_dna_intent_api_v1_business_sda_authentication_profile(self, site_name_hi
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_authentication_profile(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_authentication_profile(self) -> Dict[str, Any]:
         """Add default authentication template in SDA Fabric
 
         Add default authentication template in SDA Fabric
@@ -19284,7 +20047,8 @@ def post_dna_intent_api_v1_business_sda_authentication_profile(self) -> Dict[str
         url = self.base_url + '/dna/intent/api/v1/business/sda/authentication-profile'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_reserve_ip_subpool_site_id(self, site_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_reserve_ip_subpool_site_id(self, site_id: Any) -> Dict[str, Any]:
         """Reserve IP Subpool
 
         API to reserve an ip subpool from the global pool
@@ -19304,7 +20068,8 @@ def post_dna_intent_api_v1_reserve_ip_subpool_site_id(self, site_id: Any) -> Dic
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_reserve_ip_subpool_site_id(self, site_id: Any, id: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_reserve_ip_subpool_site_id(self, site_id: Any, id: Any) -> Dict[str, Any]:
         """Update Reserve IP Subpool
 
         API to update ip subpool from the global pool
@@ -19328,7 +20093,8 @@ def put_dna_intent_api_v1_reserve_ip_subpool_site_id(self, site_id: Any, id: Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_psk_override(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_psk_override(self) -> Dict[str, Any]:
         """PSK override
 
         Update/Override passphrase of SSID
@@ -19344,7 +20110,8 @@ def post_dna_intent_api_v1_wireless_psk_override(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/wireless/psk-override'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_credential_to_site_site_id(self, persistbapioutput: Any, site_id: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_credential_to_site_site_id(self, persistbapioutput: Any, site_id: Any) -> Dict[str, Any]:
         """Assign Device Credential To Site
 
         Assign Device Credential to a site.
@@ -19367,7 +20134,8 @@ def post_dna_intent_api_v1_credential_to_site_site_id(self, persistbapioutput: A
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_business_sda_provision_device(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_business_sda_provision_device(self) -> Dict[str, Any]:
         """Re-Provision Wired Device
 
         Re-Provision Wired Device
@@ -19383,7 +20151,8 @@ def put_dna_intent_api_v1_business_sda_provision_device(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/business/sda/provision-device'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_provision_device(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_provision_device(self) -> Dict[str, Any]:
         """Provision Wired Device
 
         Provision Wired Device
@@ -19399,7 +20168,8 @@ def post_dna_intent_api_v1_business_sda_provision_device(self) -> Dict[str, Any]
         url = self.base_url + '/dna/intent/api/v1/business/sda/provision-device'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_provision_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_provision_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Delete provisioned Wired Device
 
         Delete provisioned Wired Device
@@ -19421,7 +20191,8 @@ def delete_dna_intent_api_v1_business_sda_provision_device(self, device_manageme
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_provision_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_provision_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Get Provisioned Wired Device
 
         Get Provisioned Wired Device
@@ -19443,7 +20214,8 @@ def get_dna_intent_api_v1_business_sda_provision_device(self, device_management_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_device_credential(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_device_credential(self) -> Dict[str, Any]:
         """Update Device Credentials
 
         API to update device credentials. This API has been deprecated and will not be available in a Cisco DNA Center release after August 1st 2024 23:59:59 GMT. Please refer new Intent API : Update Global Credentials V2
@@ -19459,7 +20231,8 @@ def put_dna_intent_api_v1_device_credential(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/device-credential'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_device_credential(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_device_credential(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Credential Details
 
         API to get device credential details. This API has been deprecated and will not be available in a Cisco DNA Center release after August 1st 2024 23:59:59 GMT. Please refer new Intent API : Get All Global Credentials V2
@@ -19481,7 +20254,8 @@ def get_dna_intent_api_v1_device_credential(self, site_id: Optional[Any] = None)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_device_credential(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_device_credential(self) -> Dict[str, Any]:
         """Create Device Credentials
 
         API to create device credentials. This API has been deprecated and will not be available in a Cisco DNA Center release after August 1st 2024 23:59:59 GMT. Please refer new Intent API : Create Global Credentials V2
@@ -19497,7 +20271,8 @@ def post_dna_intent_api_v1_device_credential(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/device-credential'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_fabric_site(self, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_fabric_site(self, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Delete Site from SDA Fabric
 
         Delete Site from SDA Fabric
@@ -19519,7 +20294,8 @@ def delete_dna_intent_api_v1_business_sda_fabric_site(self, site_name_hierarchy:
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_fabric_site(self, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_fabric_site(self, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Get Site from SDA Fabric
 
         Get Site info from SDA Fabric
@@ -19541,7 +20317,8 @@ def get_dna_intent_api_v1_business_sda_fabric_site(self, site_name_hierarchy: An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_fabric_site(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_fabric_site(self) -> Dict[str, Any]:
         """Add Site in SDA Fabric
 
         Add Site in SDA Fabric
@@ -19557,7 +20334,8 @@ def post_dna_intent_api_v1_business_sda_fabric_site(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/business/sda/fabric-site'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
         """Update SP Profile
 
         API to update Service Provider Profile (QoS).
@@ -19573,7 +20351,8 @@ def put_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/service-provider'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
         """Get Service provider Details
 
         API to get service provider details (QoS).
@@ -19589,7 +20368,8 @@ def get_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/service-provider'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
         """Create SP Profile
 
         API to create Service Provider Profile(QOS).
@@ -19605,7 +20385,8 @@ def post_dna_intent_api_v1_service_provider(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/service-provider'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_site(self, runsync: Any, persistbapioutput: Any, timeout: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_site(self, runsync: Any, persistbapioutput: Any, timeout: Optional[Any] = None) -> Dict[str, Any]:
         """Create Site
 
         Creates site with area/building/floor with specified hierarchy.
@@ -19632,7 +20413,8 @@ def post_dna_intent_api_v1_site(self, runsync: Any, persistbapioutput: Any, time
         url = self.base_url + '/dna/intent/api/v1/site'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_site(self, name: Optional[Any] = None, site_id: Optional[Any] = None, type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_site(self, name: Optional[Any] = None, site_id: Optional[Any] = None, type: Optional[Any] = None, offset: Optional[Any] = None, limit: Optional[Any] = None) -> Dict[str, Any]:
         """Get Site
 
         Get site(s) by site-name-hierarchy or siteId or type. List all sites if these parameters are not given as an input.
@@ -19662,7 +20444,8 @@ def get_dna_intent_api_v1_site(self, name: Optional[Any] = None, site_id: Option
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_network_site_id(self, site_id: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_network_site_id(self, site_id: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Update Network
 
         API to update network settings for DHCP,  Syslog, SNMP, NTP, Network AAA, Client and EndPoint AAA, and/or DNS server settings.
@@ -19685,7 +20468,8 @@ def put_dna_intent_api_v1_network_site_id(self, site_id: Any, persistbapioutput:
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_network_site_id(self, site_id: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_network_site_id(self, site_id: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Create Network
 
         API to create a network for DHCP,  Syslog, SNMP, NTP, Network AAA, Client and EndPoint AAA, and/or DNS center server settings.
@@ -19708,7 +20492,8 @@ def post_dna_intent_api_v1_network_site_id(self, site_id: Any, persistbapioutput
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_virtual_network_summary(self, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_virtual_network_summary(self, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Get Virtual Network Summary
 
         Get Virtual Network Summary
@@ -19730,7 +20515,8 @@ def get_dna_intent_api_v1_business_sda_virtual_network_summary(self, site_name_h
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_profile(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_profile(self) -> Dict[str, Any]:
         """Create Wireless Profile
 
         Creates Wireless Network Profile on Cisco DNA Center and associates sites and SSIDs to it.	
@@ -19746,7 +20532,8 @@ def post_dna_intent_api_v1_wireless_profile(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/wireless/profile'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_profile(self, profile_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_profile(self, profile_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Wireless Profile
 
         Gets either one or all the wireless network profiles if no name is provided for network-profile.	
@@ -19768,7 +20555,8 @@ def get_dna_intent_api_v1_wireless_profile(self, profile_name: Optional[Any] = N
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_wireless_profile(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_wireless_profile(self) -> Dict[str, Any]:
         """Update Wireless Profile
 
         Updates the wireless Network Profile with updated details provided. All sites to be present in the network profile should be provided. 
@@ -19784,7 +20572,8 @@ def put_dna_intent_api_v1_wireless_profile(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/wireless/profile'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_reserve_ip_subpool_id(self, id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_reserve_ip_subpool_id(self, id: Any) -> Dict[str, Any]:
         """Release Reserve IP Subpool
 
         API to delete the reserved ip subpool
@@ -19804,7 +20593,8 @@ def delete_dna_intent_api_v1_reserve_ip_subpool_id(self, id: Any) -> Dict[str, A
         url = url.format(id=id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sensor_test_template(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sensor_test_template(self) -> Dict[str, Any]:
         """Duplicate sensor test template
 
         Intent API to duplicate an existing SENSOR test template
@@ -19820,7 +20610,8 @@ def put_dna_intent_api_v1_sensor_test_template(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/sensorTestTemplate'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_issue_enrichment_details(self, entity_type: Any, entity_value: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_issue_enrichment_details(self, entity_type: Any, entity_value: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Get Issue Enrichment Details
 
         Enriches a given network issue context (an issue id or end user’s Mac Address) with details about the issue(s), impacted hosts and suggested actions for remediation
@@ -19847,7 +20638,8 @@ def get_dna_intent_api_v1_issue_enrichment_details(self, entity_type: Any, entit
         url = self.base_url + '/dna/intent/api/v1/issue-enrichment-details'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_wireless_provision(self, persistbapioutput: Any) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_wireless_provision(self, persistbapioutput: Any) -> Dict[str, Any]:
         """Provision update
 
         Updates wireless provisioning
@@ -19868,7 +20660,8 @@ def put_dna_intent_api_v1_wireless_provision(self, persistbapioutput: Any) -> Di
         url = self.base_url + '/dna/intent/api/v1/wireless/provision'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_provision(self, persistbapioutput: Any) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_provision(self, persistbapioutput: Any) -> Dict[str, Any]:
         """Provision
 
         Provision wireless device
@@ -19889,7 +20682,8 @@ def post_dna_intent_api_v1_wireless_provision(self, persistbapioutput: Any) -> D
         url = self.base_url + '/dna/intent/api/v1/wireless/provision'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_assurance_get_sensor_test_results(self, site_id: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, test_failure_by: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_assurance_get_sensor_test_results(self, site_id: Optional[Any] = None, start_time: Optional[Any] = None, end_time: Optional[Any] = None, test_failure_by: Optional[Any] = None) -> Dict[str, Any]:
         """Sensor Test Results
 
         Intent API to get SENSOR test result summary
@@ -19917,7 +20711,8 @@ def get_dna_intent_api_v1_assurance_get_sensor_test_results(self, site_id: Optio
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_device_role(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_device_role(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Get device role in SDA Fabric
 
         Get device role in SDA Fabric
@@ -19939,7 +20734,8 @@ def get_dna_intent_api_v1_business_sda_device_role(self, device_management_ip_ad
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_enterprise_ssid(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_enterprise_ssid(self) -> Dict[str, Any]:
         """Create Enterprise SSID
 
         Creates enterprise SSID	
@@ -19955,7 +20751,8 @@ def post_dna_intent_api_v1_enterprise_ssid(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/enterprise-ssid'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_enterprise_ssid(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_enterprise_ssid(self) -> Dict[str, Any]:
         """Update Enterprise SSID
 
         Update enterprise SSID	
@@ -19971,7 +20768,8 @@ def put_dna_intent_api_v1_enterprise_ssid(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/enterprise-ssid'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_enterprise_ssid(self, ssid_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_enterprise_ssid(self, ssid_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get Enterprise SSID
 
         Get Enterprise SSID
@@ -19993,7 +20791,8 @@ def get_dna_intent_api_v1_enterprise_ssid(self, ssid_name: Optional[Any] = None)
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_assign_device_to_site_site_id_device(self, runsync: Any, persistbapioutput: Any, site_id: Any, timeout: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_assign_device_to_site_site_id_device(self, runsync: Any, persistbapioutput: Any, site_id: Any, timeout: Optional[Any] = None) -> Dict[str, Any]:
         """Assign Devices To Site
 
         Assigns unassigned devices to a site. This API does not move assigned devices to other sites.
@@ -20022,7 +20821,8 @@ def post_dna_intent_api_v1_assign_device_to_site_site_id_device(self, runsync: A
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_border_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_border_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Get border device detail from SDA Fabric
 
         Get border device detail from SDA Fabric
@@ -20044,7 +20844,8 @@ def get_dna_intent_api_v1_business_sda_border_device(self, device_management_ip_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_border_device(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_border_device(self) -> Dict[str, Any]:
         """Add border device in SDA Fabric
 
         Add border device in SDA Fabric
@@ -20060,7 +20861,8 @@ def post_dna_intent_api_v1_business_sda_border_device(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/business/sda/border-device'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_border_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_border_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Delete border device from SDA Fabric
 
         Delete border device from SDA Fabric
@@ -20082,7 +20884,8 @@ def delete_dna_intent_api_v1_business_sda_border_device(self, device_management_
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_hostonboarding_user_device(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_hostonboarding_user_device(self) -> Dict[str, Any]:
         """Add Port assignment for user device in SDA Fabric
 
         Add Port assignment for user device in SDA Fabric.
@@ -20098,7 +20901,8 @@ def post_dna_intent_api_v1_business_sda_hostonboarding_user_device(self) -> Dict
         url = self.base_url + '/dna/intent/api/v1/business/sda/hostonboarding/user-device'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_hostonboarding_user_device(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_hostonboarding_user_device(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
         """Get Port assignment for user device in SDA Fabric
 
         Get Port assignment for user device in SDA Fabric.
@@ -20122,7 +20926,8 @@ def get_dna_intent_api_v1_business_sda_hostonboarding_user_device(self, device_m
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_hostonboarding_user_device(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_hostonboarding_user_device(self, device_management_ip_address: Any, interface_name: Any) -> Dict[str, Any]:
         """Delete Port assignment for user device in SDA Fabric
 
         Delete Port assignment for user device in SDA Fabric.
@@ -20146,7 +20951,8 @@ def delete_dna_intent_api_v1_business_sda_hostonboarding_user_device(self, devic
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_integration_events(self, instance_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_integration_events(self, instance_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Failed ITSM Events
 
         Used to retrieve the list of integration events that failed to create tickets in ITSM
@@ -20168,7 +20974,8 @@ def get_dna_intent_api_v1_integration_events(self, instance_id: Optional[Any] = 
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_integration_events(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_integration_events(self) -> Dict[str, Any]:
         """Retry Integration Events
 
         Allows retry of multiple failed ITSM event instances. The retry request payload can be given as a list of strings: ["instance1","instance2","instance3",..] A minimum of one instance Id is mandatory. The list of failed event instance Ids can be retrieved using the 'Get Failed ITSM Events' API in the 'instanceId' attribute.
@@ -20184,7 +20991,8 @@ def post_dna_intent_api_v1_integration_events(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/integration/events'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self) -> Dict[str, Any]:
         """Update SSID to IP Pool Mapping
 
         Update SSID to IP Pool Mapping
@@ -20200,7 +21008,8 @@ def put_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self) -> Dict[
         url = self.base_url + '/dna/intent/api/v1/business/sda/hostonboarding/ssid-ippool'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self) -> Dict[str, Any]:
         """Add SSID to IP Pool Mapping
 
         Add SSID to IP Pool Mapping
@@ -20216,7 +21025,8 @@ def post_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self) -> Dict
         url = self.base_url + '/dna/intent/api/v1/business/sda/hostonboarding/ssid-ippool'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self, vlan_name: Any, site_name_hierarchy: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self, vlan_name: Any, site_name_hierarchy: Any) -> Dict[str, Any]:
         """Get SSID to IP Pool Mapping
 
         Get SSID to IP Pool Mapping
@@ -20240,7 +21050,8 @@ def get_dna_intent_api_v1_business_sda_hostonboarding_ssid_ippool(self, vlan_nam
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_business_sda_control_plane_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_business_sda_control_plane_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Get control plane device from SDA Fabric
 
         Get control plane device from SDA Fabric
@@ -20262,7 +21073,8 @@ def get_dna_intent_api_v1_business_sda_control_plane_device(self, device_managem
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_business_sda_control_plane_device(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_business_sda_control_plane_device(self) -> Dict[str, Any]:
         """Add control plane device in SDA Fabric
 
         Add control plane device in SDA Fabric
@@ -20278,7 +21090,8 @@ def post_dna_intent_api_v1_business_sda_control_plane_device(self) -> Dict[str, 
         url = self.base_url + '/dna/intent/api/v1/business/sda/control-plane-device'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_sda_control_plane_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_sda_control_plane_device(self, device_management_ip_address: Any) -> Dict[str, Any]:
         """Delete control plane device in SDA Fabric
 
         Delete control plane device in SDA Fabric
@@ -20300,7 +21113,8 @@ def delete_dna_intent_api_v1_business_sda_control_plane_device(self, device_mana
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_cmdb_sync_detail(self, status: Optional[Any] = None, date: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_cmdb_sync_detail(self, status: Optional[Any] = None, date: Optional[Any] = None) -> Dict[str, Any]:
         """Get CMDB Sync Status
 
         This API allows to retrieve the detail of CMDB sync status.It accepts two query parameter "status","date".The supported values for status field are "Success","Failed","Unknown" and date field should be in "YYYY-MM-DD" format. By default all the cmdb sync status will be send as response and based on the query parameter filtered detail will be send as response.
@@ -20324,7 +21138,8 @@ def get_dna_intent_api_v1_cmdb_sync_detail(self, status: Optional[Any] = None, d
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_site_count(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_site_count(self, site_id: Optional[Any] = None) -> Dict[str, Any]:
         """Get Site Count
 
         Get the site count of the specified site's sub-hierarchy (inclusive of the provided site)
@@ -20346,7 +21161,8 @@ def get_dna_intent_api_v1_site_count(self, site_id: Optional[Any] = None) -> Dic
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_client_enrichment_details(self, entity_type: Any, entity_value: Any, issue_category: Optional[Any] = None, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_client_enrichment_details(self, entity_type: Any, entity_value: Any, issue_category: Optional[Any] = None, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Get Client Enrichment Details
 
         Enriches a given network End User context (a network user-id or end user’s device Mac Address) with details about the user, the devices that the user is connected to and the assurance issues that the user is impacted by
@@ -20376,7 +21192,8 @@ def get_dna_intent_api_v1_client_enrichment_details(self, entity_type: Any, enti
         url = self.base_url + '/dna/intent/api/v1/client-enrichment-details'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_virtual_network(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_virtual_network(self) -> Dict[str, Any]:
         """Update virtual network with scalable groups
 
         Update virtual network with scalable groups
@@ -20392,7 +21209,8 @@ def put_dna_intent_api_v1_virtual_network(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/virtual-network'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_virtual_network(self, virtual_network_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_virtual_network(self, virtual_network_name: Any) -> Dict[str, Any]:
         """Delete virtual network with scalable groups
 
         Delete virtual network with scalable groups
@@ -20414,7 +21232,8 @@ def delete_dna_intent_api_v1_virtual_network(self, virtual_network_name: Any) ->
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_virtual_network(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_virtual_network(self) -> Dict[str, Any]:
         """Add virtual network with scalable groups
 
         Add virtual network with scalable groups at global level
@@ -20430,7 +21249,8 @@ def post_dna_intent_api_v1_virtual_network(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/virtual-network'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_virtual_network(self, virtual_network_name: Any) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_virtual_network(self, virtual_network_name: Any) -> Dict[str, Any]:
         """Get virtual network with scalable groups
 
         Get virtual network with scalable groups
@@ -20452,7 +21272,8 @@ def get_dna_intent_api_v1_virtual_network(self, virtual_network_name: Any) -> Di
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_assurance_schedule_sensor_test(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_assurance_schedule_sensor_test(self) -> Dict[str, Any]:
         """Edit sensor test template
 
         Intent API to deploy, schedule, or edit and existing SENSOR test template
@@ -20468,7 +21289,8 @@ def put_dna_intent_api_v1_assurance_schedule_sensor_test(self) -> Dict[str, Any]
         url = self.base_url + '/dna/intent/api/v1/AssuranceScheduleSensorTest'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_enterprise_ssid_ssid_name(self, ssid_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_enterprise_ssid_ssid_name(self, ssid_name: Any) -> Dict[str, Any]:
         """Delete Enterprise SSID
 
         Deletes given enterprise SSID	
@@ -20488,7 +21310,8 @@ def delete_dna_intent_api_v1_enterprise_ssid_ssid_name(self, ssid_name: Any) -> 
         url = url.format(ssid_name=ssid_name)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_wireless_dynamic_interface(self, runsync: Optional[Any] = None, timeout: Optional[Any] = None, interface_name: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_wireless_dynamic_interface(self, runsync: Optional[Any] = None, timeout: Optional[Any] = None, interface_name: Optional[Any] = None) -> Dict[str, Any]:
         """Get dynamic interface
 
         Get one or all dynamic interface(s)
@@ -20516,7 +21339,8 @@ def get_dna_intent_api_v1_wireless_dynamic_interface(self, runsync: Optional[Any
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_dynamic_interface(self, runsync: Optional[Any] = None, timeout: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_dynamic_interface(self, runsync: Optional[Any] = None, timeout: Optional[Any] = None) -> Dict[str, Any]:
         """Create Update Dynamic interface
 
         API to create or update an dynamic interface	
@@ -20540,7 +21364,8 @@ def post_dna_intent_api_v1_wireless_dynamic_interface(self, runsync: Optional[An
         url = self.base_url + '/dna/intent/api/v1/wireless/dynamic-interface'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_wireless_dynamic_interface(self, interface_name: Any, runsync: Optional[Any] = None, timeout: Optional[Any] = None) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_wireless_dynamic_interface(self, interface_name: Any, runsync: Optional[Any] = None, timeout: Optional[Any] = None) -> Dict[str, Any]:
         """Delete dynamic interface
 
         Delete a dynamic interface	
@@ -20568,7 +21393,8 @@ def delete_dna_intent_api_v1_wireless_dynamic_interface(self, interface_name: An
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_execute_suggested_actions_commands(self) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_execute_suggested_actions_commands(self) -> Dict[str, Any]:
         """Execute Suggested Actions Commands
 
         This API triggers the execution of the suggested actions for an issue, given the Issue Id. It will return an execution Id. At the completion of the execution, the output of the commands associated with the suggested actions will be provided
@@ -20586,7 +21412,8 @@ Invoking this API would provide the execution id. Execute the 'Get Business API 
         url = self.base_url + '/dna/intent/api/v1/execute-suggested-actions-commands'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_application_policy_application_set_count(self) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_application_policy_application_set_count(self) -> Dict[str, Any]:
         """Get Application Sets Count
 
         Get the number of existing application-sets 
@@ -20602,7 +21429,8 @@ def get_dna_intent_api_v1_application_policy_application_set_count(self) -> Dict
         url = self.base_url + '/dna/intent/api/v1/application-policy-application-set-count'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_user_enrichment_details(self, entity_type: Any, entity_value: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_user_enrichment_details(self, entity_type: Any, entity_value: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Get User Enrichment Details
 
         Enriches a given network End User context (a network user-id or end user’s device Mac Address) with details about the user and devices that the user is connected to
@@ -20629,7 +21457,8 @@ def get_dna_intent_api_v1_user_enrichment_details(self, entity_type: Any, entity
         url = self.base_url + '/dna/intent/api/v1/user-enrichment-details'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def post_dna_intent_api_v1_wireless_ap_provision(self, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def post_dna_intent_api_v1_wireless_ap_provision(self, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """AP Provision
 
         Access Point Provision and ReProvision	
@@ -20650,7 +21479,8 @@ def post_dna_intent_api_v1_wireless_ap_provision(self, persistbapioutput: Option
         url = self.base_url + '/dna/intent/api/v1/wireless/ap-provision'
         params = {}
         return self._handle_request('post', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_device_enrichment_details(self, entity_type: Any, entity_value: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_device_enrichment_details(self, entity_type: Any, entity_value: Any, persistbapioutput: Optional[Any] = None) -> Dict[str, Any]:
         """Get Device Enrichment Details
 
         Enriches a given network device context (device id or device Mac Address or device management IP address) with details about the device and neighbor topology
@@ -20677,7 +21507,8 @@ def get_dna_intent_api_v1_device_enrichment_details(self, entity_type: Any, enti
         url = self.base_url + '/dna/intent/api/v1/device-enrichment-details'
         params = {}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_site_site_id(self, site_id: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_site_site_id(self, site_id: Any) -> Dict[str, Any]:
         """Delete Site
 
         Delete site with area/building/floor by siteId.
@@ -20697,7 +21528,8 @@ def delete_dna_intent_api_v1_site_site_id(self, site_id: Any) -> Dict[str, Any]:
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_site_site_id(self, persistbapioutput: Any, site_id: Any, runsync: Optional[Any] = None, timeout: Optional[Any] = None) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_site_site_id(self, persistbapioutput: Any, site_id: Any, runsync: Optional[Any] = None, timeout: Optional[Any] = None) -> Dict[str, Any]:
         """Update Site
 
         Update site area/building/floor with specified hierarchy and new values
@@ -20726,7 +21558,8 @@ def put_dna_intent_api_v1_site_site_id(self, persistbapioutput: Any, site_id: An
         url = url.format(site_id=site_id)
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def get_dna_intent_api_v1_membership_site_id(self, site_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, device_family: Optional[Any] = None, serial_number: Optional[Any] = None) -> Dict[str, Any]:
+
+    def get_dna_intent_api_v1_membership_site_id(self, site_id: Any, offset: Optional[Any] = None, limit: Optional[Any] = None, device_family: Optional[Any] = None, serial_number: Optional[Any] = None) -> Dict[str, Any]:
         """Get Membership
 
         Getting the site children details and device details.
@@ -20756,7 +21589,8 @@ def get_dna_intent_api_v1_membership_site_id(self, site_id: Any, offset: Optiona
         }
         params = {k: v for k, v in params.items() if v is not None}
         return self._handle_request('get', url, params=params, headers=request_headers)
-def put_dna_intent_api_v1_sensor_run_now(self) -> Dict[str, Any]:
+
+    def put_dna_intent_api_v1_sensor_run_now(self) -> Dict[str, Any]:
         """Run now sensor test
 
         Intent API to run a deployed SENSOR test
@@ -20772,7 +21606,8 @@ def put_dna_intent_api_v1_sensor_run_now(self) -> Dict[str, Any]:
         url = self.base_url + '/dna/intent/api/v1/sensor-run-now'
         params = {}
         return self._handle_request('put', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_wireless_profile_wireless_profile_name(self, wireless_profile_name: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_wireless_profile_wireless_profile_name(self, wireless_profile_name: Any) -> Dict[str, Any]:
         """Delete Wireless Profile
 
         Delete the Wireless Profile whose name is provided.
@@ -20792,7 +21627,8 @@ def delete_dna_intent_api_v1_wireless_profile_wireless_profile_name(self, wirele
         url = url.format(wireless_profile_name=wireless_profile_name)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
-def delete_dna_intent_api_v1_business_ssid_ssid_name_managed_a_p_locations(self, persistbapioutput: Any, ssid_name: Any, managed_a_p_locations: Any) -> Dict[str, Any]:
+
+    def delete_dna_intent_api_v1_business_ssid_ssid_name_managed_a_p_locations(self, persistbapioutput: Any, ssid_name: Any, managed_a_p_locations: Any) -> Dict[str, Any]:
         """Delete SSID and provision it to devices
 
         Removes SSID or WLAN from the network profile, reprovision the device(s) and deletes the SSID or WLAN from DNA Center	
@@ -20816,3 +21652,7 @@ def delete_dna_intent_api_v1_business_ssid_ssid_name_managed_a_p_locations(self,
         url = url.format(ssid_name=ssid_name, managed_a_p_locations=managed_a_p_locations)
         params = {}
         return self._handle_request('delete', url, params=params, headers=request_headers)
+
+
+# Create a singleton instance
+client = APIClient()
