@@ -58,6 +58,69 @@ def categorize_device(device: Dict[str, Any]) -> str:
     return None  # Ignore other device types
 
 
+def write_inventory_report(device_counts: Dict[str, Dict[str, int]], matched_sites: List[str]) -> None:
+    """Write detailed inventory report to a text file.
+    
+    Args:
+        device_counts (Dict[str, Dict[str, int]]): Counts of devices by site and type
+        matched_sites (List[str]): List of sites that were matched to CSV
+    """
+    try:
+        with open("dnac_inventory.txt", "w") as f:
+            f.write("DNA Center Inventory Report\n")
+            f.write("=========================\n\n")
+            
+            # First list matched sites
+            f.write("Matched Sites\n")
+            f.write("------------\n")
+            for site_name in sorted(matched_sites):
+                counts = device_counts[site_name]
+                f.write(f"\nSite: {site_name}\n")
+                f.write("Device Counts:\n")
+                for device_type, count in counts.items():
+                    if count > 0:  # Only show device types that were found
+                        f.write(f"  {device_type}: {count}\n")
+            
+            # Then list unmatched sites
+            unmatched_sites = set(device_counts.keys()) - set(matched_sites)
+            if unmatched_sites:
+                f.write("\n\nUnmatched Sites\n")
+                f.write("--------------\n")
+                for site_name in sorted(unmatched_sites):
+                    counts = device_counts[site_name]
+                    f.write(f"\nSite: {site_name}\n")
+                    f.write("Device Counts:\n")
+                    for device_type, count in counts.items():
+                        if count > 0:  # Only show device types that were found
+                            f.write(f"  {device_type}: {count}\n")
+            
+            # Add summary
+            f.write("\n\nSummary\n")
+            f.write("-------\n")
+            f.write(f"Total Sites Found: {len(device_counts)}\n")
+            f.write(f"Sites Matched to CSV: {len(matched_sites)}\n")
+            f.write(f"Sites Not Matched: {len(unmatched_sites)}\n")
+            
+            # Total device counts across all sites
+            total_counts = {
+                "Distribution Routers": 0,
+                "48 Port Switches": 0,
+                "24 Port Switches": 0
+            }
+            for site_counts in device_counts.values():
+                for device_type, count in site_counts.items():
+                    total_counts[device_type] += count
+            
+            f.write("\nTotal Devices Found:\n")
+            for device_type, count in total_counts.items():
+                if count > 0:  # Only show device types that were found
+                    f.write(f"  {device_type}: {count}\n")
+        
+        print(f"\nDetailed inventory report written to dnac_inventory.txt")
+    except Exception as e:
+        print(f"Error writing inventory report: {e}")
+
+
 def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any]]) -> None:
     """Update inventory counts in CSV data.
     
@@ -73,6 +136,8 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
 
     # Process each device
     device_counts = {}  # Track counts per site
+    matched_sites = []  # Track which sites were matched to CSV
+    
     for device in devices:
         try:
             # Debug print for device details
@@ -99,7 +164,7 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
             if category:  # Only count switches
                 if site_name not in device_counts:
                     device_counts[site_name] = {
-                        "Distribution Routers": 0,  # Actually distribution switches
+                        "Distribution Routers": 0,
                         "48 Port Switches": 0,
                         "24 Port Switches": 0
                     }
@@ -119,6 +184,7 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
             best_match_title = find_best_match(site_name, csv_titles)
 
             if best_match_title:
+                matched_sites.append(site_name)  # Track that this site was matched
                 for row in csv_data:
                     if row[title_column].strip() == best_match_title:
                         try:
@@ -137,6 +203,9 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
         except Exception as e:
             print(f"Error processing site {site_name}: {e}")
             continue
+    
+    # Write detailed inventory report
+    write_inventory_report(device_counts, matched_sites)
 
 
 def main():
