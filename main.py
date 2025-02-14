@@ -29,40 +29,30 @@ def find_best_match(target: str, candidates: List[str]) -> str:
 
 
 def categorize_device(device: Dict[str, Any]) -> str:
-    """Categorize device based on its properties.
+    """Get device model information.
     
     Args:
         device (Dict[str, Any]): Device information from DNA Center
         
     Returns:
-        str: Device category or None if not a switch
+        str: Device model or None if not a switch
     """
     family = device.get('family', '').lower()
     series = device.get('series', '').lower()
-    model = device.get('platformId', '').lower()
+    model = device.get('platformId', '')  # Keep original case for model numbers
     
-    # Check if it's a switch
+    # Only process switches
     if 'switch' in family or 'catalyst' in series:
-        # Distribution switches (typically 9300/9500 series)
-        if any(x in model for x in ['9300', '9500']):
-            return "Distribution Routers"  # Keep the CSV column name as is
-        
-        # 48-port switches
-        if any(x in model for x in ['48p', '48-port', '48port', '48t', '-48']):
-            return "48 Port Switches"
-            
-        # 24-port switches
-        if any(x in model for x in ['24p', '24-port', '24port', '24t', '-24']):
-            return "24 Port Switches"
+        return model
     
-    return None  # Ignore other device types
+    return None
 
 
 def write_inventory_report(device_counts: Dict[str, Dict[str, int]], matched_sites: List[str]) -> None:
     """Write detailed inventory report to a text file.
     
     Args:
-        device_counts (Dict[str, Dict[str, int]]): Counts of devices by site and type
+        device_counts (Dict[str, Dict[str, int]]): Counts of devices by site and model
         matched_sites (List[str]): List of sites that were matched to CSV
     """
     try:
@@ -75,11 +65,12 @@ def write_inventory_report(device_counts: Dict[str, Dict[str, int]], matched_sit
             f.write("------------\n")
             for site_name in sorted(matched_sites):
                 counts = device_counts[site_name]
-                f.write(f"\nSite: {site_name}\n")
-                f.write("Device Counts:\n")
-                for device_type, count in counts.items():
-                    if count > 0:  # Only show device types that were found
-                        f.write(f"  {device_type}: {count}\n")
+                if any(count > 0 for count in counts.values()):  # Only show sites with devices
+                    f.write(f"\nSite: {site_name}\n")
+                    f.write("Device Models:\n")
+                    for model, count in sorted(counts.items()):
+                        if count > 0:  # Only show models that were found
+                            f.write(f"  {model}: {count}\n")
             
             # Then list unmatched sites
             unmatched_sites = set(device_counts.keys()) - set(matched_sites)
@@ -88,11 +79,12 @@ def write_inventory_report(device_counts: Dict[str, Dict[str, int]], matched_sit
                 f.write("--------------\n")
                 for site_name in sorted(unmatched_sites):
                     counts = device_counts[site_name]
-                    f.write(f"\nSite: {site_name}\n")
-                    f.write("Device Counts:\n")
-                    for device_type, count in counts.items():
-                        if count > 0:  # Only show device types that were found
-                            f.write(f"  {device_type}: {count}\n")
+                    if any(count > 0 for count in counts.values()):  # Only show sites with devices
+                        f.write(f"\nSite: {site_name}\n")
+                        f.write("Device Models:\n")
+                        for model, count in sorted(counts.items()):
+                            if count > 0:  # Only show models that were found
+                                f.write(f"  {model}: {count}\n")
             
             # Add summary
             f.write("\n\nSummary\n")
@@ -101,20 +93,19 @@ def write_inventory_report(device_counts: Dict[str, Dict[str, int]], matched_sit
             f.write(f"Sites Matched to CSV: {len(matched_sites)}\n")
             f.write(f"Sites Not Matched: {len(unmatched_sites)}\n")
             
-            # Total device counts across all sites
-            total_counts = {
-                "Distribution Routers": 0,
-                "48 Port Switches": 0,
-                "24 Port Switches": 0
-            }
+            # Total device counts across all sites by model
+            total_counts = {}
             for site_counts in device_counts.values():
-                for device_type, count in site_counts.items():
-                    total_counts[device_type] += count
+                for model, count in site_counts.items():
+                    if model not in total_counts:
+                        total_counts[model] = 0
+                    total_counts[model] += count
             
-            f.write("\nTotal Devices Found:\n")
-            for device_type, count in total_counts.items():
-                if count > 0:  # Only show device types that were found
-                    f.write(f"  {device_type}: {count}\n")
+            if total_counts:
+                f.write("\nTotal Devices by Model:\n")
+                for model, count in sorted(total_counts.items()):
+                    if count > 0:  # Only show models that were found
+                        f.write(f"  {model}: {count}\n")
         
         print(f"\nDetailed inventory report written to dnac_inventory.txt")
     except Exception as e:
@@ -137,6 +128,7 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
     # Process each device
     device_counts = {}  # Track counts per site
     matched_sites = []  # Track which sites were matched to CSV
+    all_models = set()  # Track all unique models found
     
     for device in devices:
         try:
@@ -160,16 +152,15 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
                 print(f"WARNING: No location or hostname found for device: {device}")
                 continue
 
-            category = categorize_device(device)
-            if category:  # Only count switches
+            model = categorize_device(device)
+            if model:  # Only count switches
                 if site_name not in device_counts:
-                    device_counts[site_name] = {
-                        "Distribution Routers": 0,
-                        "48 Port Switches": 0,
-                        "24 Port Switches": 0
-                    }
-                device_counts[site_name][category] += 1
-                print(f"Found {category} at site '{site_name}': {device.get('platformId', 'Unknown model')}")
+                    device_counts[site_name] = {}
+                if model not in device_counts[site_name]:
+                    device_counts[site_name][model] = 0
+                device_counts[site_name][model] += 1
+                all_models.add(model)
+                print(f"Found {model} at site '{site_name}'")
         except Exception as e:
             print(f"Error processing device: {e}")
             print("Device data:")
@@ -188,9 +179,16 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
                 for row in csv_data:
                     if row[title_column].strip() == best_match_title:
                         try:
-                            # Increment counts for each switch type
-                            for category, count in counts.items():
-                                if count > 0:  # Only update if we found switches of this type
+                            # Map models to CSV categories
+                            csv_counts = {
+                                "Distribution Routers": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['9300', '9500'])),
+                                "48 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['48p', '48-port', '48port', '48t', '-48'])),
+                                "24 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['24p', '24-port', '24port', '24t', '-24']))
+                            }
+                            
+                            # Update CSV with categorized counts
+                            for category, count in csv_counts.items():
+                                if count > 0:
                                     current_count = int(row.get(category, "0") or "0")
                                     row[category] = str(current_count + count)
                                     print(f"Updated {category} count for '{best_match_title}' (+{count})")
