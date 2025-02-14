@@ -40,11 +40,15 @@ def categorize_device(device: Dict[str, Any]) -> str:
         device (Dict[str, Any]): Device information from DNA Center
         
     Returns:
-        str: Device model or None if not a switch
+        str: Device model or None if not a switch or if it's an ISR
     """
     family = device.get('family', '').lower()
     series = device.get('series', '').lower()
     platform_id = device.get('platformId', '')
+    
+    # Skip ISRs and non-switches
+    if 'isr' in platform_id.lower() or 'isr' in series.lower():
+        return None
     
     # Only process switches
     if 'switch' in family or 'catalyst' in series:
