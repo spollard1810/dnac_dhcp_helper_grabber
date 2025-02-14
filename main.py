@@ -14,12 +14,13 @@ requests_log.setLevel(logging.DEBUG)
 requests_log.propagate = True
 
 
-def find_matches(target: str, candidates: List[str], threshold: float = 0.8) -> List[str]:
+def find_matches(target: str, candidates: List[str], threshold: float = 0.9) -> List[str]:
     """Find all matches in candidates that exceed the similarity threshold.
+    Each candidate may contain multiple site names separated by ' / '.
     
     Args:
         target (str): String to match
-        candidates (List[str]): List of possible matches
+        candidates (List[str]): List of possible matches (may contain multiple names per entry)
         threshold (float): Minimum similarity ratio to consider a match
         
     Returns:
@@ -27,10 +28,18 @@ def find_matches(target: str, candidates: List[str], threshold: float = 0.8) -> 
     """
     matches = []
     for candidate in candidates:
-        ratio = SequenceMatcher(None, target.lower(), candidate.lower()).ratio()
-        if ratio >= threshold:
-            matches.append(candidate)
-    return matches
+        # Split candidate into individual site names
+        site_names = [name.strip() for name in candidate.split('/')]
+        
+        # Check each individual site name
+        for site_name in site_names:
+            if not site_name:  # Skip empty strings
+                continue
+            ratio = SequenceMatcher(None, target.lower(), site_name.lower()).ratio()
+            if ratio >= threshold:
+                matches.append(candidate)  # Add the full abbrev string as a match
+                break  # Move to next candidate once we find a match
+    return list(set(matches))  # Remove any duplicates
 
 
 def categorize_device(device: Dict[str, Any]) -> str:
@@ -117,7 +126,7 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
     
     # Update CSV with counts
     for site, counts in device_counts.items():
-        # Find potential matches
+        # Find potential matches with higher threshold
         matches = find_matches(site, abbrevs)
         
         if len(matches) == 0:
