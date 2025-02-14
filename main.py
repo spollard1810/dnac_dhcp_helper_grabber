@@ -125,10 +125,11 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
         print("Error: Could not find 'Title' column in CSV")
         return
 
-    # Debug print first device to see structure
-    if devices:
-        print("\nExample device data structure:")
-        print(json.dumps(devices[0], indent=2))
+    print("\nFull device data structure for first few devices:")
+    for device in devices[:3]:  # Show first 3 devices
+        print("\n" + "="*50)
+        print(json.dumps(device, indent=2))
+        print("="*50)
 
     # Process each device
     device_counts = {}  # Track counts per site
@@ -137,22 +138,11 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
     
     for device in devices:
         try:
-            # Debug print for device details
-            print("\nProcessing device:")
-            print(f"Hostname: {device.get('hostname', 'N/A')}")
-            print(f"Site: {device.get('location', 'N/A')}")  # Try location instead of site
-            print(f"Platform: {device.get('series', 'N/A')}")  # Try series as platform
-            
-            # Get site name from location field
             location = device.get('location')
             if not location:
-                print(f"WARNING: No location information found for device: {device.get('hostname', 'Unknown')}")
                 continue
-            
-            # Clean up site name
-            site_name = location.strip()
-            print(f"Using location: {site_name}")
 
+            site_name = location.strip()
             model = categorize_device(device)
             if model:  # Only count switches
                 if site_name not in device_counts:
@@ -161,11 +151,8 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
                     device_counts[site_name][model] = 0
                 device_counts[site_name][model] += 1
                 all_models.add(model)
-                print(f"Found {model} at site '{site_name}'")
         except Exception as e:
             print(f"Error processing device: {e}")
-            print("Device data:")
-            print(json.dumps(device, indent=2))
             continue
 
     # Update CSV with counts
