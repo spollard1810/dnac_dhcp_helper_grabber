@@ -147,7 +147,9 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
                     csv_counts = {
                         "Distribution Routers": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['9300', '9500'])),
                         "48 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['48p', '48-port', '48port', '48t', '-48'])),
-                        "24 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['24p', '24-port', '24port', '24t', '-24']))
+                        "24 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['24p', '24-port', '24port', '24t', '-24'])),
+                        "12 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['12p', '12-port', '12port', 'c9200cx-12'])),
+                        "9410 / Chassis": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['9410', '9407', '9606', 'c9407', 'c9606']))
                     }
                     
                     # Update CSV with categorized counts
