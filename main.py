@@ -39,73 +39,116 @@ def categorize_device(device: Dict[str, Any]) -> str:
     """
     family = device.get('family', '').lower()
     series = device.get('series', '').lower()
-    platform = device.get('platform', '')  # Use platform instead of platformId
+    platform_id = device.get('platformId', '')
     
     # Only process switches
     if 'switch' in family or 'catalyst' in series:
-        return platform
+        return platform_id
     
     return None
 
 
-def write_inventory_report(device_counts: Dict[str, Dict[str, int]], matched_sites: List[str]) -> None:
+def get_site_from_hostname(hostname: str) -> str:
+    """Extract site name from hostname prefix.
+    
+    Args:
+        hostname (str): Device hostname
+        
+    Returns:
+        str: Site name based on hostname prefix (part before first '-')
+    """
+    if not hostname:
+        return "Unknown"
+    
+    # Split on '-' and take the first part
+    parts = hostname.split('-')
+    return parts[0] if parts else "Unknown"
+
+
+def write_inventory_report(devices: List[Dict[str, Any]]) -> None:
     """Write detailed inventory report to a text file.
     
     Args:
-        device_counts (Dict[str, Dict[str, int]]): Counts of devices by site and model
-        matched_sites (List[str]): List of sites that were matched to CSV
+        devices (List[Dict[str, Any]]): List of devices from DNA Center
     """
     try:
+        # Group devices by site (hostname prefix)
+        site_devices = {}
+        
+        for device in devices:
+            hostname = device.get('hostname', '')
+            if not hostname:
+                continue
+                
+            site = get_site_from_hostname(hostname)
+            if site not in site_devices:
+                site_devices[site] = {}
+            
+            platform_id = device.get('platformId', 'Unknown')
+            if platform_id not in site_devices[site]:
+                site_devices[site][platform_id] = []
+            
+            # Store device details
+            site_devices[site][platform_id].append({
+                'hostname': hostname,
+                'series': device.get('series', 'Unknown'),
+                'family': device.get('family', 'Unknown'),
+                'software': device.get('softwareVersion', 'Unknown')
+            })
+
+        # Write the report
         with open("dnac_inventory.txt", "w") as f:
             f.write("DNA Center Inventory Report\n")
             f.write("=========================\n\n")
             
-            # First list matched sites
-            f.write("Matched Sites\n")
-            f.write("------------\n")
-            for site_name in sorted(matched_sites):
-                counts = device_counts[site_name]
-                if any(count > 0 for count in counts.values()):  # Only show sites with devices
-                    f.write(f"\nSite: {site_name}\n")
-                    f.write("Device Models:\n")
-                    for model, count in sorted(counts.items()):
-                        if count > 0:  # Only show models that were found
-                            f.write(f"  {model}: {count}\n")
+            # List all sites and their devices
+            for site in sorted(site_devices.keys()):
+                # Make site header more prominent
+                f.write("\n" + "="*50 + "\n")
+                f.write(f"SITE: {site}\n")
+                f.write("="*50 + "\n")
+                
+                # Count totals for this site
+                model_counts = {}
+                for platform_id, devices in site_devices[site].items():
+                    model_counts[platform_id] = len(devices)
+                
+                # Print summary counts for site
+                f.write("\nDevice Counts:\n")
+                f.write("-" * 13 + "\n")
+                for platform_id, count in sorted(model_counts.items()):
+                    f.write(f"  {platform_id}: {count}\n")
+                
+                # Print detailed device information
+                f.write("\nDetailed Device List:\n")
+                f.write("-" * 19 + "\n")
+                for platform_id, devices in sorted(site_devices[site].items()):
+                    f.write(f"\n  {platform_id}:\n")
+                    for device in sorted(devices, key=lambda x: x['hostname']):
+                        f.write(f"    - {device['hostname']}\n")
+                        f.write(f"      Series: {device['series']}\n")
+                        f.write(f"      Family: {device['family']}\n")
+                        f.write(f"      Software: {device['software']}\n")
+                        f.write("\n")  # Add space between devices
             
-            # Then list unmatched sites
-            unmatched_sites = set(device_counts.keys()) - set(matched_sites)
-            if unmatched_sites:
-                f.write("\n\nUnmatched Sites\n")
-                f.write("--------------\n")
-                for site_name in sorted(unmatched_sites):
-                    counts = device_counts[site_name]
-                    if any(count > 0 for count in counts.values()):  # Only show sites with devices
-                        f.write(f"\nSite: {site_name}\n")
-                        f.write("Device Models:\n")
-                        for model, count in sorted(counts.items()):
-                            if count > 0:  # Only show models that were found
-                                f.write(f"  {model}: {count}\n")
+            # Add overall summary
+            f.write("\n" + "="*50 + "\n")
+            f.write("OVERALL SUMMARY\n")
+            f.write("=" * 50 + "\n")
+            f.write(f"\nTotal Sites: {len(site_devices)}\n")
             
-            # Add summary
-            f.write("\n\nSummary\n")
-            f.write("-------\n")
-            f.write(f"Total Sites Found: {len(device_counts)}\n")
-            f.write(f"Sites Matched to CSV: {len(matched_sites)}\n")
-            f.write(f"Sites Not Matched: {len(unmatched_sites)}\n")
-            
-            # Total device counts across all sites by model
+            # Count total devices by model across all sites
             total_counts = {}
-            for site_counts in device_counts.values():
-                for model, count in site_counts.items():
-                    if model not in total_counts:
-                        total_counts[model] = 0
-                    total_counts[model] += count
+            for site_data in site_devices.values():
+                for platform_id, devices in site_data.items():
+                    if platform_id not in total_counts:
+                        total_counts[platform_id] = 0
+                    total_counts[platform_id] += len(devices)
             
-            if total_counts:
-                f.write("\nTotal Devices by Model:\n")
-                for model, count in sorted(total_counts.items()):
-                    if count > 0:  # Only show models that were found
-                        f.write(f"  {model}: {count}\n")
+            f.write("\nTotal Devices by Model:\n")
+            f.write("-" * 21 + "\n")
+            for platform_id, count in sorted(total_counts.items()):
+                f.write(f"  {platform_id}: {count}\n")
         
         print(f"\nDetailed inventory report written to dnac_inventory.txt")
     except Exception as e:
@@ -138,11 +181,13 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
     
     for device in devices:
         try:
-            location = device.get('location')
-            if not location:
+            hostname = device.get('hostname', '')
+            if not hostname:
+                print(f"WARNING: No hostname found for device ({device.get('platformId', 'Unknown')})")
                 continue
 
-            site_name = location.strip()
+            # Get site from hostname prefix
+            site_name = get_site_from_hostname(hostname)
             model = categorize_device(device)
             if model:  # Only count switches
                 if site_name not in device_counts:
@@ -151,8 +196,10 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
                     device_counts[site_name][model] = 0
                 device_counts[site_name][model] += 1
                 all_models.add(model)
+                print(f"Found {model} at site '{site_name}'")
         except Exception as e:
             print(f"Error processing device: {e}")
+            print(f"Device: {device.get('hostname', 'Unknown')} ({device.get('platformId', 'Unknown')})")
             continue
 
     # Update CSV with counts
@@ -191,7 +238,7 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
             continue
     
     # Write detailed inventory report
-    write_inventory_report(device_counts, matched_sites)
+    write_inventory_report(devices)
 
 
 def main():
