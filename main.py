@@ -74,43 +74,69 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
     # Process each device
     device_counts = {}  # Track counts per site
     for device in devices:
-        site_name = device.get('locationName', device.get('hostname', '')).strip()
-        if not site_name:
-            continue
+        try:
+            # Debug print for device details
+            print("\nProcessing device:")
+            print(f"Hostname: {device.get('hostname', 'N/A')}")
+            print(f"Location: {device.get('locationName', 'N/A')}")
+            print(f"Model: {device.get('platformId', 'N/A')}")
+            
+            # Get site name with defensive programming
+            location_name = device.get('locationName')
+            hostname = device.get('hostname')
+            
+            if location_name:
+                site_name = location_name.strip()
+                print(f"Using location name: {site_name}")
+            elif hostname:
+                site_name = hostname.strip()
+                print(f"Using hostname as fallback: {site_name}")
+            else:
+                print(f"WARNING: No location or hostname found for device: {device}")
+                continue
 
-        category = categorize_device(device)
-        if category:  # Only count switches
-            if site_name not in device_counts:
-                device_counts[site_name] = {
-                    "Distribution Routers": 0,  # Actually distribution switches
-                    "48 Port Switches": 0,
-                    "24 Port Switches": 0
-                }
-            device_counts[site_name][category] += 1
-            print(f"Found {category} at site '{site_name}': {device.get('platformId', 'Unknown model')}")
+            category = categorize_device(device)
+            if category:  # Only count switches
+                if site_name not in device_counts:
+                    device_counts[site_name] = {
+                        "Distribution Routers": 0,  # Actually distribution switches
+                        "48 Port Switches": 0,
+                        "24 Port Switches": 0
+                    }
+                device_counts[site_name][category] += 1
+                print(f"Found {category} at site '{site_name}': {device.get('platformId', 'Unknown model')}")
+        except Exception as e:
+            print(f"Error processing device: {e}")
+            print("Device data:")
+            print(json.dumps(device, indent=2))
+            continue
 
     # Update CSV with counts
     for site_name, counts in device_counts.items():
-        # Get list of existing titles
-        csv_titles = [row[title_column].strip() for row in csv_data]
-        best_match_title = find_best_match(site_name, csv_titles)
+        try:
+            # Get list of existing titles
+            csv_titles = [row[title_column].strip() for row in csv_data]
+            best_match_title = find_best_match(site_name, csv_titles)
 
-        if best_match_title:
-            for row in csv_data:
-                if row[title_column].strip() == best_match_title:
-                    try:
-                        # Increment counts for each switch type
-                        for category, count in counts.items():
-                            if count > 0:  # Only update if we found switches of this type
-                                current_count = int(row.get(category, "0") or "0")
-                                row[category] = str(current_count + count)
-                                print(f"Updated {category} count for '{best_match_title}' (+{count})")
-                    except ValueError as e:
-                        print(f"Error converting values for row '{best_match_title}': {e}")
-                    break
-        else:
-            print(f"No matching row found for site '{site_name}'")
-            print(f"Device counts that would have been added: {counts}")
+            if best_match_title:
+                for row in csv_data:
+                    if row[title_column].strip() == best_match_title:
+                        try:
+                            # Increment counts for each switch type
+                            for category, count in counts.items():
+                                if count > 0:  # Only update if we found switches of this type
+                                    current_count = int(row.get(category, "0") or "0")
+                                    row[category] = str(current_count + count)
+                                    print(f"Updated {category} count for '{best_match_title}' (+{count})")
+                        except ValueError as e:
+                            print(f"Error converting values for row '{best_match_title}': {e}")
+                        break
+            else:
+                print(f"No matching row found for site '{site_name}'")
+                print(f"Device counts that would have been added: {counts}")
+        except Exception as e:
+            print(f"Error processing site {site_name}: {e}")
+            continue
 
 
 def main():
