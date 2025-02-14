@@ -39,11 +39,11 @@ def categorize_device(device: Dict[str, Any]) -> str:
     """
     family = device.get('family', '').lower()
     series = device.get('series', '').lower()
-    model = device.get('platformId', '')  # Keep original case for model numbers
+    platform = device.get('platform', '')  # Use platform instead of platformId
     
     # Only process switches
     if 'switch' in family or 'catalyst' in series:
-        return model
+        return platform
     
     return None
 
@@ -125,6 +125,11 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
         print("Error: Could not find 'Title' column in CSV")
         return
 
+    # Debug print first device to see structure
+    if devices:
+        print("\nExample device data structure:")
+        print(json.dumps(devices[0], indent=2))
+
     # Process each device
     device_counts = {}  # Track counts per site
     matched_sites = []  # Track which sites were matched to CSV
@@ -135,22 +140,18 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
             # Debug print for device details
             print("\nProcessing device:")
             print(f"Hostname: {device.get('hostname', 'N/A')}")
-            print(f"Location: {device.get('locationName', 'N/A')}")
-            print(f"Model: {device.get('platformId', 'N/A')}")
+            print(f"Site: {device.get('location', 'N/A')}")  # Try location instead of site
+            print(f"Platform: {device.get('series', 'N/A')}")  # Try series as platform
             
-            # Get site name with defensive programming
-            location_name = device.get('locationName')
-            hostname = device.get('hostname')
-            
-            if location_name:
-                site_name = location_name.strip()
-                print(f"Using location name: {site_name}")
-            elif hostname:
-                site_name = hostname.strip()
-                print(f"Using hostname as fallback: {site_name}")
-            else:
-                print(f"WARNING: No location or hostname found for device: {device}")
+            # Get site name from location field
+            location = device.get('location')
+            if not location:
+                print(f"WARNING: No location information found for device: {device.get('hostname', 'Unknown')}")
                 continue
+            
+            # Clean up site name
+            site_name = location.strip()
+            print(f"Using location: {site_name}")
 
             model = categorize_device(device)
             if model:  # Only count switches
