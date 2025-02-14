@@ -2,14 +2,35 @@
 
 from api import client
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import logging
+import csv
+from difflib import SequenceMatcher
 
 # Set up debug logging
 logging.basicConfig(level=logging.DEBUG)
 requests_log = logging.getLogger("urllib3")
 requests_log.setLevel(logging.DEBUG)
 requests_log.propagate = True
+
+
+def find_matches(target: str, candidates: List[str], threshold: float = 0.8) -> List[str]:
+    """Find all matches in candidates that exceed the similarity threshold.
+    
+    Args:
+        target (str): String to match
+        candidates (List[str]): List of possible matches
+        threshold (float): Minimum similarity ratio to consider a match
+        
+    Returns:
+        List[str]: List of matches that exceed the threshold
+    """
+    matches = []
+    for candidate in candidates:
+        ratio = SequenceMatcher(None, target.lower(), candidate.lower()).ratio()
+        if ratio >= threshold:
+            matches.append(candidate)
+    return matches
 
 
 def categorize_device(device: Dict[str, Any]) -> str:
@@ -49,11 +70,94 @@ def get_site_from_hostname(hostname: str) -> str:
     return parts[0] if parts else "Unknown"
 
 
-def write_inventory_report(devices: List[Dict[str, Any]]) -> None:
+def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any]]) -> Tuple[List[Dict[str, str]], Dict[str, List[str]]]:
+    """Update inventory counts in CSV data using abbrev column for matching.
+    
+    Args:
+        csv_data (List[Dict[str, str]]): Existing CSV data
+        devices (List[Dict[str, Any]]): Device list from DNA Center
+        
+    Returns:
+        Tuple[List[Dict[str, str]], Dict[str, List[str]]]: Updated CSV data and unmatched sites
+    """
+    # Add 'matched' column if it doesn't exist
+    if 'matched' not in csv_data[0]:
+        for row in csv_data:
+            row['matched'] = 'N'
+    
+    # Process devices and group by site
+    device_counts = {}
+    unmatched_sites = {}
+    
+    for device in devices:
+        try:
+            hostname = device.get('hostname', '')
+            if not hostname:
+                continue
+            
+            site = get_site_from_hostname(hostname)
+            model = categorize_device(device)
+            
+            if model:  # Only count switches
+                if site not in device_counts:
+                    device_counts[site] = {}
+                if model not in device_counts[site]:
+                    device_counts[site][model] = 0
+                device_counts[site][model] += 1
+        except Exception as e:
+            print(f"Error processing device {hostname}: {e}")
+            continue
+    
+    # Get list of abbreviations
+    abbrevs = [row['abbrev'].strip() for row in csv_data]
+    
+    # Update CSV with counts
+    for site, counts in device_counts.items():
+        # Find potential matches
+        matches = find_matches(site, abbrevs)
+        
+        if len(matches) == 0:
+            # No match found
+            unmatched_sites[site] = ["No match found"]
+            continue
+        elif len(matches) > 1:
+            # Multiple potential matches
+            unmatched_sites[site] = [f"Multiple matches: {', '.join(matches)}"]
+            continue
+        
+        # Exactly one match found
+        match = matches[0]
+        for row in csv_data:
+            if row['abbrev'].strip() == match:
+                try:
+                    # Map models to CSV categories
+                    csv_counts = {
+                        "Distribution Routers": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['9300', '9500'])),
+                        "48 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['48p', '48-port', '48port', '48t', '-48'])),
+                        "24 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['24p', '24-port', '24port', '24t', '-24']))
+                    }
+                    
+                    # Update CSV with categorized counts
+                    for category, count in csv_counts.items():
+                        if count > 0:
+                            current_count = int(row.get(category, "0") or "0")
+                            row[category] = str(current_count + count)
+                    
+                    row['matched'] = 'Y'
+                    print(f"Matched site '{site}' to '{match}' and updated counts")
+                except ValueError as e:
+                    print(f"Error updating counts for {match}: {e}")
+                break
+    
+    return csv_data, unmatched_sites
+
+
+def write_inventory_report(devices: List[Dict[str, Any]], unmatched_sites: Dict[str, List[str]]) -> None:
     """Write detailed inventory report to a text file.
     
     Args:
         devices (List[Dict[str, Any]]): List of devices from DNA Center
+        unmatched_sites (Dict[str, List[str]]): Sites that couldn't be matched
     """
     try:
         # Group devices by site (hostname prefix)
@@ -90,6 +194,8 @@ def write_inventory_report(devices: List[Dict[str, Any]]) -> None:
                 # Make site header more prominent
                 f.write("\n" + "="*50 + "\n")
                 f.write(f"SITE: {site}\n")
+                if site in unmatched_sites:
+                    f.write(f"WARNING: {unmatched_sites[site][0]}\n")
                 f.write("="*50 + "\n")
                 
                 # Count totals for this site
@@ -133,6 +239,13 @@ def write_inventory_report(devices: List[Dict[str, Any]]) -> None:
             f.write("-" * 21 + "\n")
             for platform_id, count in sorted(total_counts.items()):
                 f.write(f"  {platform_id}: {count}\n")
+            
+            # Add unmatched sites summary
+            if unmatched_sites:
+                f.write("\nUnmatched Sites:\n")
+                f.write("-" * 15 + "\n")
+                for site, reasons in sorted(unmatched_sites.items()):
+                    f.write(f"  {site}: {reasons[0]}\n")
         
         print(f"\nDetailed inventory report written to dnac_inventory.txt")
     except Exception as e:
@@ -143,14 +256,35 @@ def main():
     try:
         print(f"Using DNAC host: {client.host}")
         
+        # Read existing CSV data
+        csv_data = []
+        try:
+            with open("input.csv", "r") as csvfile:
+                reader = csv.DictReader(csvfile)
+                csv_data = list(reader)
+        except FileNotFoundError:
+            print("Error: input.csv not found")
+            return 1
+        
         # Get list of network devices from DNA Center
         print("Getting network devices...")
         response = client.get_dna_intent_api_v1_network_device()
         devices = response.get('response', [])
         
-        # Generate inventory report
-        write_inventory_report(devices)
+        # Update inventory and get unmatched sites
+        updated_csv, unmatched_sites = update_inventory(csv_data, devices)
         
+        # Generate inventory report
+        write_inventory_report(devices, unmatched_sites)
+        
+        # Write updated data back to CSV
+        with open("input.csv", "w", newline="") as csvfile:
+            fieldnames = updated_csv[0].keys()
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(updated_csv)
+        
+        print("\nSuccessfully updated input.csv")
         client.close()
 
     except Exception as e:
