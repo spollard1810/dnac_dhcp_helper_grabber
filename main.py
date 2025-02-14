@@ -152,7 +152,7 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
                         "24 Port Switches": sum(count for model, count in counts.items() 
                             if any(x in model.lower() for x in ['24p', '24t', '-24', 'c9300-24'])),
                         "12 Port Switches": sum(count for model, count in counts.items() 
-                            if 'c9200cx-12' in model.lower()),
+                            if 'c9200cx-12p' in model.lower()),
                         "9410 / Chassis": sum(count for model, count in counts.items() 
                             if any(x in model.lower() for x in ['c9410r', 'c9407r', 'c9606r']))
                     }
