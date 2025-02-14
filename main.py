@@ -145,11 +145,16 @@ def update_inventory(csv_data: List[Dict[str, str]], devices: List[Dict[str, Any
                 try:
                     # Map models to CSV categories
                     csv_counts = {
-                        "Distribution Routers": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['9300', '9500'])),
-                        "48 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['48p', '48-port', '48port', '48t', '-48'])),
-                        "24 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['24p', '24-port', '24port', '24t', '-24'])),
-                        "12 Port Switches": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['12p', '12-port', '12port', 'c9200cx-12'])),
-                        "9410 / Chassis": sum(count for model, count in counts.items() if any(x in model.lower() for x in ['9410', '9407', '9606', 'c9407', 'c9606']))
+                        "Distribution Routers": sum(count for model, count in counts.items() 
+                            if any(x in model.lower() for x in ['c9500-16x', 'c9500-24y4c', 'c9500-40x', 'c9500-48y4c'])),
+                        "48 Port Switches": sum(count for model, count in counts.items() 
+                            if any(x in model.lower() for x in ['48p', '48t', '48uxm', '-48', 'c9300-48'])),
+                        "24 Port Switches": sum(count for model, count in counts.items() 
+                            if any(x in model.lower() for x in ['24p', '24t', '-24', 'c9300-24'])),
+                        "12 Port Switches": sum(count for model, count in counts.items() 
+                            if 'c9200cx-12' in model.lower()),
+                        "9410 / Chassis": sum(count for model, count in counts.items() 
+                            if any(x in model.lower() for x in ['c9410r', 'c9407r', 'c9606r']))
                     }
                     
                     # Update CSV with categorized counts
